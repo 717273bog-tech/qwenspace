@@ -140,17 +140,43 @@ app.post('/api/register', async (req, res) => {
 });
 
 // === ВХОД ===
+// === ВХОД ===
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
+  console.log('🔑 Попытка входа:', username);
+  
   try {
+    // Ищем пользователя
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username.toLowerCase()]);
-    const user = result.rows[0];
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    
+    if (result.rows.length === 0) {
+      console.log('❌ Пользователь не найден');
       return res.status(401).json({ error: 'Неверные данные' });
     }
-    res.json(user);
+
+    const user = result.rows[0];
+    console.log('✅ Пользователь найден, проверяем пароль...');
+
+    // Сравниваем пароль
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      console.log('❌ Неверный пароль');
+      return res.status(401).json({ error: 'Неверные данные' });
+    }
+
+    console.log('✅ Вход успешен!');
+    // Отправляем данные без пароля
+    res.json({ 
+      id: user.id, 
+      username: user.username, 
+      name: user.name, 
+      avatar: user.avatar 
+    });
+
   } catch(e) {
-    res.status(500).json({ error: e.message });
+    console.error('❌ Ошибка при входе:', e);
+    res.status(500).json({ error: 'Ошибка сервера: ' + e.message });
   }
 });
 
