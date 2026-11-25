@@ -44,37 +44,56 @@ const pool = new Pool({
 });
 
 async function initDB() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    username TEXT UNIQUE,
-    name TEXT,
-    password TEXT,
-    avatar TEXT,
-    bio TEXT DEFAULT '',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS posts (
-    id SERIAL PRIMARY KEY,
-    author_id INTEGER,
-    content TEXT,
-    image_url TEXT,
-    type TEXT DEFAULT 'public',
-    recipient_id INTEGER,
-    tag TEXT,
-    likes INTEGER DEFAULT 0,
-    liked_by TEXT DEFAULT '[]',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS messages (
-    id SERIAL PRIMARY KEY,
-    from_id INTEGER,
-    to_id INTEGER,
-    content TEXT,
-    is_read INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )`);
-  console.log('✅ База данных готова');
+  try {
+    console.log('🔌 Подключаюсь к базе данных...');
+    
+    console.log('📋 Создаю таблицу users...');
+    await pool.query(`CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE,
+      name TEXT,
+      password TEXT,
+      avatar TEXT,
+      bio TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('✅ Таблица users готова');
+    
+    console.log('📋 Создаю таблицу posts...');
+    await pool.query(`CREATE TABLE IF NOT EXISTS posts (
+      id SERIAL PRIMARY KEY,
+      author_id INTEGER,
+      content TEXT,
+      image_url TEXT,
+      type TEXT DEFAULT 'public',
+      recipient_id INTEGER,
+      tag TEXT,
+      likes INTEGER DEFAULT 0,
+      liked_by TEXT DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('✅ Таблица posts готова');
+    
+    console.log('📋 Создаю таблицу messages...');
+    await pool.query(`CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      from_id INTEGER,
+      to_id INTEGER,
+      content TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    console.log('✅ Таблица messages готова');
+    
+    console.log('✅ Все таблицы базы данных созданы!');
+  } catch(e) {
+    console.error('❌ Ошибка инициализации БД:', e);
+    console.error('❌ Детали ошибки:', e.message);
+    console.error('❌ Stack:', e.stack);
+  }
 }
+
+initDB().catch(e => console.error('❌ Критическая ошибка инициализации:', e));
 
 initDB().catch(e => console.error('❌ Ошибка инициализации БД:', e));
 
