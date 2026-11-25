@@ -38,9 +38,18 @@ app.use('/uploads', express.static(uploadsDir));
 app.use(express.json());
 
 // === PostgreSQL ===
+// === PostgreSQL (Устойчивое подключение для Railway) ===
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  max: 10, // Максимум 10 одновременных подключений
+  idleTimeoutMillis: 30000, // Закрывать неактивные соединения через 30 сек
+  connectionTimeoutMillis: 5000, // Таймаут подключения 5 сек
+});
+
+// Ловим ошибки соединения, чтобы сервер не падал
+pool.on('error', (err) => {
+  console.error('⚠️ Ошибка пула соединений PostgreSQL:', err.message);
 });
 
 async function initDB() {
