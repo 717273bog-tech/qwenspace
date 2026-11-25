@@ -1,21 +1,16 @@
 {
   "name": "qwenspace",
   "version": "1.0.0",
-  "description": "",
+  "description": "My Social Network",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "express": "^5.3.0",
-    "multer": "^2.5.0",
-    "socket.io": "^4.8.4",
-    "pg": "^6.0.1"
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "multer": "^1.4.5-lts.1"
   }
 }
