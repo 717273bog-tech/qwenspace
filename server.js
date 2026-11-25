@@ -82,24 +82,40 @@ const onlineUsers = new Map();
 
 // === РЕГИСТРАЦИЯ ===
 app.post('/api/register', async (req, res) => {
-  console.log('📥 Регистрация:', req.body.username);
+  console.log('📥 Получен запрос регистрации:', req.body);
   const { username, name, password, avatar } = req.body;
-  if (!username || !password || !name) return res.status(400).json({ error: 'Заполни все поля' });
+  
+  if (!username || !password || !name) {
+    console.log('❌ Не заполнены все поля');
+    return res.status(400).json({ error: 'Заполни все поля' });
+  }
+  
   const cleanUsername = username.toLowerCase().trim();
+  
   try {
+    console.log('🔍 Проверяю, существует ли username:', cleanUsername);
     const existing = await pool.query('SELECT id FROM users WHERE username = $1', [cleanUsername]);
-    if (existing.rows.length > 0) return res.status(400).json({ error: 'Этот username уже занят' });
+    
+    if (existing.rows.length > 0) {
+      console.log('❌ Username уже занят:', cleanUsername);
+      return res.status(400).json({ error: 'Этот username уже занят' });
+    }
+    
+    console.log('✅ Username свободен, создаю пользователя...');
     const hash = await bcrypt.hash(password, 10);
     const finalAvatar = avatar || '👤';
+    
     const result = await pool.query(
       'INSERT INTO users (username, name, password, avatar) VALUES ($1, $2, $3, $4) RETURNING id',
       [cleanUsername, name, hash, finalAvatar]
     );
+    
     const newId = result.rows[0].id;
-    console.log(`✅ Создан: ${cleanUsername} (ID: ${newId})`);
+    console.log(`✅ Пользователь создан: ${cleanUsername} (ID: ${newId})`);
+    
     res.json({ id: newId, username: cleanUsername, name, avatar: finalAvatar });
   } catch(e) {
-    console.error('❌', e);
+    console.error('❌ Ошибка регистрации:', e);
     res.status(500).json({ error: e.message });
   }
 });
