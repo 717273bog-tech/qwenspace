@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Соцсеть</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Моя Соцсеть</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
   body { background: linear-gradient(135deg,#0f0c29,#302b63,#24243e); min-height:100vh; color:#eee; padding:20px; }
@@ -60,9 +60,9 @@
   .composer button { background:linear-gradient(45deg,#ff6b6b,#feca57); border:none; color:#000; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; }
   .upload-btn { background:rgba(255,255,255,0.08); border:1px dashed rgba(255,255,255,0.3); color:#aaa; padding:8px 14px; border-radius:15px; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
   .upload-btn:hover { background:rgba(255,255,255,0.15); color:#fff; }
-  .image-preview { margin-top:10px; position:relative; display:inline-block; }
-  .image-preview img { max-width:200px; max-height:150px; border-radius:10px; border:2px solid rgba(254,202,87,0.5); }
-  .image-preview .remove-img { position:absolute; top:-8px; right:-8px; background:#ff6b6b; color:#fff; border:none; width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:14px; }
+  .media-preview { margin-top:10px; position:relative; display:inline-block; }
+  .media-preview img, .media-preview video { max-width:200px; max-height:150px; border-radius:10px; border:2px solid rgba(254,202,87,0.5); }
+  .remove-media { position:absolute; top:-8px; right:-8px; background:#ff6b6b; color:#fff; border:none; width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:14px; }
   .post { background:rgba(255,255,255,0.06); border-radius:16px; padding:20px; margin-bottom:18px; border:1px solid rgba(255,255,255,0.08); }
   .post-head { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
   .mini-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(45deg,#feca57,#ff9ff3); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; cursor:pointer; }
@@ -72,9 +72,11 @@
   .post-tag { margin-left:auto; padding:4px 10px; border-radius:20px; font-size:11px; background:rgba(254,202,87,0.2); color:#feca57; }
   .post-recipient { margin-top:8px; padding:8px 12px; background:rgba(72,219,251,0.1); border-left:3px solid #48dbfb; border-radius:6px; font-size:13px; color:#48dbfb; }
   .post-content { line-height:1.6; font-size:15px; white-space:pre-wrap; margin-top:10px; }
-  .post-image { margin-top:12px; border-radius:12px; overflow:hidden; cursor:pointer; max-height:500px; }
-  .post-image img { width:100%; display:block; transition:transform 0.3s; }
-  .post-image:hover img { transform:scale(1.02); }
+  .post-media { margin-top:12px; border-radius:12px; overflow:hidden; max-height:500px; }
+  .post-media.clickable { cursor:pointer; }
+  .post-media img { width:100%; display:block; transition:transform 0.3s; }
+  .post-media.clickable:hover img { transform:scale(1.02); }
+  .post-media video { width:100%; display:block; max-height:500px; }
   .post-actions { margin-top:15px; display:flex; gap:20px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08); }
   .btn { background:none; border:none; color:#aaa; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px; }
   .btn:hover { color:#ff6b6b; }
@@ -83,10 +85,11 @@
   .empty-feed-icon { font-size:60px; margin-bottom:15px; }
   .modal { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; }
   .modal.show { display:flex; }
-  .image-viewer { position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:500; cursor:pointer; }
+  .image-viewer { position:fixed; inset:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:500; cursor:pointer; flex-direction:column; }
   .image-viewer.show { display:flex; }
   .image-viewer img { max-width:90%; max-height:90%; border-radius:10px; }
-  .image-viewer-close { position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); border:none; color:#fff; width:40px; height:40px; border-radius:50%; font-size:20px; cursor:pointer; }
+  .image-viewer video { max-width:90%; max-height:90%; border-radius:10px; }
+  .image-viewer-close { position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); border:none; color:#fff; width:40px; height:40px; border-radius:50%; font-size:20px; cursor:pointer; z-index:501; }
   .chat-window { background:linear-gradient(135deg,#1a1a2e,#16213e); border:1px solid rgba(255,255,255,0.1); border-radius:20px; width:100%; max-width:480px; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
   .chat-header { padding:16px 20px; background:rgba(0,0,0,0.3); display:flex; align-items:center; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); }
   .chat-header-info { flex:1; }
@@ -121,144 +124,90 @@
   .profile-section { background:rgba(255,255,255,0.05); border-radius:16px; padding:20px; margin-bottom:20px; }
   .profile-section h3 { font-size:16px; margin-bottom:15px; color:#feca57; }
   .photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .photo-grid-item { aspect-ratio:1; border-radius:10px; overflow:hidden; cursor:pointer; background:rgba(0,0,0,0.3); }
+  .photo-grid-item { aspect-ratio:1; border-radius:10px; overflow:hidden; cursor:pointer; background:rgba(0,0,0,0.3); position:relative; }
   .photo-grid-item img { width:100%; height:100%; object-fit:cover; transition:transform 0.3s; }
+  .photo-grid-item video { width:100%; height:100%; object-fit:cover; }
   .photo-grid-item:hover img { transform:scale(1.1); }
+  .video-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:30px; pointer-events:none; }
   .back-btn { background:rgba(255,255,255,0.1); border:none; color:#eee; padding:8px 16px; border-radius:20px; cursor:pointer; font-size:13px; margin-bottom:15px; }
   .back-btn:hover { background:rgba(255,255,255,0.2); }
   .notification { position:fixed; top:20px; right:20px; background:linear-gradient(45deg,#ff6b6b,#feca57); color:#000; padding:14px 22px; border-radius:12px; font-weight:bold; box-shadow:0 10px 30px rgba(0,0,0,0.4); transform:translateX(400px); transition:transform 0.4s; z-index:600; max-width:300px; }
   .notification.show { transform:translateX(0); }
   footer { text-align:center; padding:20px; color:#666; font-size:12px; }
- /* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
-@media (max-width: 768px) {
-  body { padding: 10px; }
-  
-  .container { max-width: 100%; }
-  
-  header { padding: 15px 10px; }
-  
-  .header-top { flex-wrap: wrap; }
-  
-  .user-badge { font-size: 12px; padding: 5px 10px 5px 5px; }
-  .user-badge-avatar { width: 28px; height: 28px; font-size: 16px; }
-  
-  .icon-btn { width: 36px; height: 36px; font-size: 16px; }
-  
-  .avatar { width: 80px; height: 80px; font-size: 40px; }
-  
-  h1 { font-size: 22px; }
-  
-  .stats { gap: 15px; }
-  .stat b { font-size: 16px; }
-  .stat span { font-size: 11px; }
-  
-  .composer { padding: 12px; }
-  .composer textarea { min-height: 60px; font-size: 13px; }
-  
-  .composer-mode { gap: 4px; }
-  .mode-btn { padding: 5px 10px; font-size: 11px; }
-  
-  .composer-buttons { flex-direction: column; }
-  .composer button { width: 100%; padding: 12px; }
-  .upload-btn { width: 100%; justify-content: center; }
-  
-  .post { padding: 15px; margin-bottom: 12px; }
-  
-  .post-head { gap: 8px; }
-  .mini-avatar { width: 36px; height: 36px; font-size: 18px; }
-  
-  .post-author b { font-size: 14px; }
-  .post-author small { font-size: 11px; }
-  
-  .post-tag { font-size: 10px; padding: 3px 8px; }
-  
-  .post-content { font-size: 14px; }
-  
-  .post-image { max-height: 300px; }
-  
-  .post-actions { gap: 15px; }
-  .btn { font-size: 13px; }
-  
-  .online-user { font-size: 12px; padding: 5px 10px; }
-  
-  /* Чат на мобильных */
-  .chat-window { max-width: 100%; max-height: 100vh; border-radius: 0; height: 100vh; }
-  
-  .chat-header { padding: 12px 15px; }
-  
-  .chat-messages { padding: 10px; }
-  .message { max-width: 85%; font-size: 13px; }
-  
-  .chat-input-area { padding: 8px; }
-  .chat-input-area input { font-size: 13px; padding: 8px 12px; }
-  .chat-send { width: 36px; height: 36px; font-size: 14px; }
-  
-  /* Профиль */
-  .profile-header { padding: 20px 15px; }
-  .profile-avatar { width: 100px; height: 100px; font-size: 50px; }
-  .profile-name { font-size: 20px; }
-  .profile-username { font-size: 13px; }
-  .profile-bio { font-size: 13px; }
-  
-  .profile-stats { gap: 20px; }
-  
-  .profile-actions { flex-direction: column; }
-  .profile-actions button { width: 100%; }
-  
-  .photo-grid { grid-template-columns: repeat(2, 1fr); }
-  
-  /* Модальные окна */
-  .modal { padding: 0; }
-  
-  /* Авторизация */
-  .auth-card { padding: 25px 20px; }
-  .auth-logo { width: 70px; height: 70px; font-size: 35px; }
-  .auth-card h2 { font-size: 20px; }
-  .auth-subtitle { font-size: 12px; }
-  
-  .avatar-picker { grid-template-columns: repeat(6, 1fr); }
-  .avatar-option { font-size: 18px; }
-  
-  .form-group input { font-size: 14px; padding: 10px 12px; }
-  
-  .auth-btn { font-size: 14px; padding: 12px; }
-  
-  /* Уведомления */
-  .notification { top: 10px; right: 10px; left: 10px; max-width: none; font-size: 13px; padding: 12px 16px; }
-  
-  /* Просмотр фото */
-  .image-viewer img { max-width: 100%; max-height: 100%; border-radius: 0; }
-  .image-viewer-close { top: 10px; right: 10px; width: 36px; height: 36px; font-size: 18px; }
-}
 
-/* Очень маленькие экраны (iPhone SE и т.д.) */
-@media (max-width: 375px) {
-  body { padding: 5px; }
-  
-  header { padding: 10px 8px; }
-  
-  .avatar { width: 60px; height: 60px; font-size: 30px; }
-  
-  h1 { font-size: 18px; }
-  
-  .stats { gap: 10px; }
-  .stat b { font-size: 14px; }
-  .stat span { font-size: 10px; }
-  
-  .post { padding: 12px; }
-  .mini-avatar { width: 32px; height: 32px; font-size: 16px; }
-  
-  .composer textarea { font-size: 12px; }
-  
-  .avatar-picker { grid-template-columns: repeat(5, 1fr); }
-}
+  /* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    .container { max-width: 100%; }
+    header { padding: 15px 10px; }
+    .header-top { flex-wrap: wrap; }
+    .user-badge { font-size: 12px; padding: 5px 10px 5px 5px; }
+    .user-badge-avatar { width: 28px; height: 28px; font-size: 16px; }
+    .icon-btn { width: 36px; height: 36px; font-size: 16px; }
+    .site-title { font-size: 22px; }
+    .stats { gap: 15px; }
+    .stat b { font-size: 16px; }
+    .stat span { font-size: 11px; }
+    .composer { padding: 12px; }
+    .composer textarea { min-height: 60px; font-size: 13px; }
+    .composer-mode { gap: 4px; }
+    .mode-btn { padding: 5px 10px; font-size: 11px; }
+    .composer-buttons { flex-direction: column; }
+    .composer button { width: 100%; padding: 12px; }
+    .upload-btn { width: 100%; justify-content: center; }
+    .post { padding: 15px; margin-bottom: 12px; }
+    .post-head { gap: 8px; }
+    .mini-avatar { width: 36px; height: 36px; font-size: 18px; }
+    .post-author b { font-size: 14px; }
+    .post-author small { font-size: 11px; }
+    .post-tag { font-size: 10px; padding: 3px 8px; }
+    .post-content { font-size: 14px; }
+    .post-media { max-height: 300px; }
+    .post-actions { gap: 15px; }
+    .btn { font-size: 13px; }
+    .online-user { font-size: 12px; padding: 5px 10px; }
+    .chat-window { max-width: 100%; max-height: 100vh; border-radius: 0; height: 100vh; }
+    .chat-header { padding: 12px 15px; }
+    .chat-messages { padding: 10px; }
+    .message { max-width: 85%; font-size: 13px; }
+    .chat-input-area { padding: 8px; }
+    .chat-input-area input { font-size: 13px; padding: 8px 12px; }
+    .chat-send { width: 36px; height: 36px; font-size: 14px; }
+    .profile-header { padding: 20px 15px; }
+    .profile-avatar { width: 100px; height: 100px; font-size: 50px; }
+    .profile-name { font-size: 20px; }
+    .profile-username { font-size: 13px; }
+    .profile-bio { font-size: 13px; }
+    .profile-stats { gap: 20px; }
+    .profile-actions { flex-direction: column; }
+    .profile-actions button { width: 100%; }
+    .photo-grid { grid-template-columns: repeat(2, 1fr); }
+    .modal { padding: 0; }
+    .auth-card { padding: 25px 20px; }
+    .auth-logo { width: 70px; height: 70px; font-size: 35px; }
+    .auth-card h2 { font-size: 20px; }
+    .auth-subtitle { font-size: 12px; }
+    .avatar-picker { grid-template-columns: repeat(6, 1fr); }
+    .avatar-option { font-size: 18px; }
+    .form-group input { font-size: 14px; padding: 10px 12px; }
+    .auth-btn { font-size: 14px; padding: 12px; }
+    .notification { top: 10px; right: 10px; left: 10px; max-width: none; font-size: 13px; padding: 12px 16px; }
+    .image-viewer img, .image-viewer video { max-width: 100%; max-height: 100%; border-radius: 0; }
+    .image-viewer-close { top: 10px; right: 10px; width: 36px; height: 36px; font-size: 18px; }
+  }
 
-/* Планшеты */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .container { max-width: 90%; }
-  
-  .chat-window { max-width: 90%; }
-}
+  @media (max-width: 375px) {
+    body { padding: 5px; }
+    header { padding: 10px 8px; }
+    .site-title { font-size: 18px; }
+    .stats { gap: 10px; }
+    .stat b { font-size: 14px; }
+    .stat span { font-size: 10px; }
+    .post { padding: 12px; }
+    .mini-avatar { width: 32px; height: 32px; font-size: 16px; }
+    .composer textarea { font-size: 12px; }
+    .avatar-picker { grid-template-columns: repeat(5, 1fr); }
+  }
 </style>
 </head>
 <body>
@@ -267,8 +216,8 @@
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
     <div class="auth-logo">🌐</div>
-    <h2>Соцсеть</h2>
-    <div class="auth-subtitle">Общайся, делись фото, находи друзей</div>
+    <h2>Моя Соцсеть</h2>
+    <div class="auth-subtitle">Общайся, делись фото и видео, находи друзей</div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchTab('login')">Вход</div>
       <div class="auth-tab" onclick="switchTab('register')">Регистрация</div>
@@ -300,8 +249,8 @@
       <button class="icon-btn" onclick="openChat()" title="Сообщения">💬<span class="badge" id="msgBadge" style="display:none;">0</span></button>
       <button class="icon-btn" onclick="logout()" title="Выйти">🚪</button>
     </div>
-    <div class="site-title">Соцсеть</div>
-    <div class="site-subtitle">Общайся с друзьями, делись моментами 📸</div>
+    <div class="site-title">Моя Соцсеть</div>
+    <div class="site-subtitle">Общайся с друзьями, делись моментами 📸🎥</div>
     <div class="stats">
       <div class="stat"><b id="postCount">0</b><span>постов</span></div>
       <div class="stat"><b id="userCount">0</b><span>жителей</span></div>
@@ -330,12 +279,12 @@
         <div class="recipient-list" id="recipientList"></div>
       </div>
       <textarea id="newPost" placeholder="О чём подумать вслух?.."></textarea>
-      <div id="imagePreviewArea"></div>
+      <div id="mediaPreviewArea"></div>
       <div class="composer-buttons">
         <button onclick="addPost()">Опубликовать ✨</button>
         <label class="upload-btn">
-          📷 Фото
-          <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImageSelect(event)">
+          📷 Фото / 🎥 Видео
+          <input type="file" id="mediaInput" accept="image/*,video/*" style="display:none;" onchange="handleMediaSelect(event)">
         </label>
       </div>
     </div>
@@ -353,12 +302,12 @@
       <div class="profile-stats">
         <div class="stat"><b id="profilePosts">0</b><span>постов</span></div>
         <div class="stat"><b id="profileLikes">0</b><span>лайков</span></div>
-        <div class="stat"><b id="profilePhotos">0</b><span>фото</span></div>
+        <div class="stat"><b id="profilePhotos">0</b><span>медиа</span></div>
       </div>
       <div class="profile-actions" id="profileActions"></div>
     </div>
     <div class="profile-section" id="profilePhotosSection" style="display:none;">
-      <h3>📸 Фотографии</h3>
+      <h3>📸 Фото и видео</h3>
       <div class="photo-grid" id="profilePhotoGrid"></div>
     </div>
     <div class="profile-section">
@@ -367,7 +316,7 @@
     </div>
   </div>
 
-  <footer>Соцсеть · 2026 🌌</footer>
+  <footer>Моя Соцсеть · 2026 🌌</footer>
 </div>
 
 <!-- ЧАТ -->
@@ -387,10 +336,9 @@
   </div>
 </div>
 
-<!-- ПРОСМОТР ФОТО -->
-<div class="image-viewer" id="imageViewer" onclick="closeImageViewer()">
-  <button class="image-viewer-close" onclick="closeImageViewer()">×</button>
-  <img id="viewerImage" src="">
+<!-- ПРОСМОТР МЕДИА -->
+<div class="image-viewer" id="imageViewer" onclick="closeImageViewer(event)">
+  <button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>
 </div>
 
 <div class="notification" id="notification"></div>
@@ -408,7 +356,8 @@ let postMode = 'public';
 let selectedRecipient = null;
 let chatWith = null;
 let onlineUsersList = [];
-let currentImageFile = null;
+let currentMediaFile = null;
+let currentMediaType = null;
 
 // === АВТОРИЗАЦИЯ ===
 function initAvatarPicker(){
@@ -524,59 +473,87 @@ function setMode(mode) {
 
 function selectRecipient(id) { selectedRecipient = id; setMode(postMode); }
 
-function handleImageSelect(event){
+function handleMediaSelect(event){
   const file = event.target.files[0];
   if(!file) return;
-  if(file.size > 5 * 1024 * 1024){ showNotification('⚠️ Файл слишком большой (макс. 5 МБ)'); return; }
-  currentImageFile = file;
+  
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+  const label = isVideo ? 'видео' : 'фото';
+  
+  if(file.size > maxSize){ 
+    showNotification(`⚠️ Файл слишком большой (макс. ${isVideo ? '50' : '5'} МБ для ${label})`); 
+    return; 
+  }
+  
+  currentMediaFile = file;
+  currentMediaType = isVideo ? 'video' : 'image';
+  
   const reader = new FileReader();
   reader.onload = (e) => {
-    document.getElementById('imagePreviewArea').innerHTML = `
-      <div class="image-preview">
-        <img src="${e.target.result}">
-        <button class="remove-img" onclick="removeImage()">×</button>
-      </div>`;
+    if(isVideo) {
+      document.getElementById('mediaPreviewArea').innerHTML = `
+        <div class="media-preview">
+          <video src="${e.target.result}" controls></video>
+          <button class="remove-media" onclick="removeMedia()">×</button>
+        </div>`;
+    } else {
+      document.getElementById('mediaPreviewArea').innerHTML = `
+        <div class="media-preview">
+          <img src="${e.target.result}">
+          <button class="remove-media" onclick="removeMedia()">×</button>
+        </div>`;
+    }
   };
   reader.readAsDataURL(file);
 }
 
-function removeImage() {
-  currentImageFile = null;
-  document.getElementById('imagePreviewArea').innerHTML = '';
-  document.getElementById('imageInput').value = '';
+function removeMedia() {
+  currentMediaFile = null;
+  currentMediaType = null;
+  document.getElementById('mediaPreviewArea').innerHTML = '';
+  document.getElementById('mediaInput').value = '';
 }
 
-async function uploadImage(){
-  if(!currentImageFile) return null;
+async function uploadMedia(){
+  if(!currentMediaFile) return null;
   const formData = new FormData();
-  formData.append('image', currentImageFile);
+  formData.append('file', currentMediaFile);
   const res = await fetch('/api/upload', { method: 'POST', body: formData });
   const data = await res.json();
-  if(data.url) return data.url;
+  if(data.url) return data;
   throw new Error(data.error || 'Ошибка загрузки');
 }
 
 async function addPost() {
   const txt = document.getElementById('newPost').value.trim();
-  if(!txt && !currentImageFile) return showNotification('⚠️ Напиши текст или добавь фото');
+  if(!txt && !currentMediaFile) return showNotification('⚠️ Напиши текст или добавь фото/видео');
   if((postMode === 'mention' || postMode === 'private') && !selectedRecipient) return showNotification('⚠️ Выбери получателя');
 
   try {
-    let imageUrl = null;
-    if(currentImageFile){
-      showNotification('📤 Загружаю фото...');
-      imageUrl = await uploadImage();
+    let mediaData = null;
+    if(currentMediaFile){
+      showNotification('📤 Загружаю файл...');
+      mediaData = await uploadMedia();
     }
-    await fetch('/api/posts', {
+    
+    const res = await fetch('/api/posts', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         author_id: currentUser.id, content: txt, type: postMode,
         recipient_id: selectedRecipient, tag: postMode === 'private' ? 'личное' : 'пост',
-        image_url: imageUrl
+        media_url: mediaData ? mediaData.url : null,
+        media_type: mediaData ? mediaData.type : null
       })
     });
+    
+    if(!res.ok) {
+      const err = await res.json();
+      return showNotification('❌ ' + err.error);
+    }
+    
     document.getElementById('newPost').value = '';
-    removeImage();
+    removeMedia();
     selectedRecipient = null;
     setMode('public');
     showNotification('✨ Опубликовано');
@@ -621,7 +598,15 @@ function renderFeed(){
       recipientBlock = `<div class="post-recipient" style="background:rgba(255,107,107,0.1);border-left-color:#ff6b6b;color:#ff9a9a;">🔒 личное сообщение</div>`;
     }
     
-    const imageBlock = p.image_url ? `<div class="post-image" onclick="openImageViewer('${p.image_url}')"><img src="${p.image_url}" loading="lazy"></div>` : '';
+    let mediaBlock = '';
+    if(p.media_url) {
+      if(p.media_type === 'video') {
+        mediaBlock = `<div class="post-media"><video src="${p.media_url}" controls></video></div>`;
+      } else {
+        mediaBlock = `<div class="post-media clickable" onclick="openImageViewer('${p.media_url}', 'image')"><img src="${p.media_url}" loading="lazy"></div>`;
+      }
+    }
+    
     const safeUsername = p.author_username.replace(/'/g, "\\'");
     
     feed.innerHTML += `
@@ -636,8 +621,8 @@ function renderFeed(){
         </div>
         ${recipientBlock}
         ${p.content ? `<div class="post-content">${p.content}</div>` : ''}
-        ${imageBlock}
-             <div class="post-actions">
+        ${mediaBlock}
+        <div class="post-actions">
           <button class="btn ${liked}" onclick="toggleLike(${p.id})">♥ ${p.likes}</button>
           <button class="btn" onclick="replyTo('${safeUsername}')">↩ ответить</button>
           ${currentUser.username === 'admin' ? 
@@ -658,14 +643,41 @@ function replyTo(username) {
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-// === ПРОСМОТР ФОТО ===
-function openImageViewer(url) {
-  document.getElementById('viewerImage').src = url;
-  document.getElementById('imageViewer').classList.add('show');
+// === ПРОСМОТР МЕДИА ===
+function openImageViewer(url, type) {
+  const viewer = document.getElementById('imageViewer');
+  if(type === 'video') {
+    viewer.innerHTML = `
+      <button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>
+      <video src="${url}" controls autoplay style="max-width:90%;max-height:90%;border-radius:10px;"></video>
+    `;
+  } else {
+    viewer.innerHTML = `
+      <button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>
+      <img src="${url}">
+    `;
+  }
+  viewer.classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
-function closeImageViewer() {
-  document.getElementById('imageViewer').classList.remove('show');
+
+function closeImageViewer(event) {
+  if(event) event.stopPropagation();
+  const viewer = document.getElementById('imageViewer');
+  viewer.classList.remove('show');
+  viewer.innerHTML = '<button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>';
+  document.body.style.overflow = '';
 }
+
+// Свайп для закрытия на мобильных
+let touchStartY = 0;
+document.getElementById('imageViewer').addEventListener('touchstart', (e) => {
+  touchStartY = e.touches[0].clientY;
+});
+document.getElementById('imageViewer').addEventListener('touchend', (e) => {
+  const touchEndY = e.changedTouches[0].clientY;
+  if (touchEndY - touchStartY > 100) closeImageViewer();
+});
 
 // === ПРОФИЛЬ ===
 async function openProfile(username) {
@@ -687,7 +699,7 @@ async function openProfile(username) {
     document.getElementById('profileLikes').textContent = data.stats.likes;
     document.getElementById('profilePhotos').textContent = data.photos.length;
     
-        const actions = document.getElementById('profileActions');
+    const actions = document.getElementById('profileActions');
     if(user.username === currentUser.username){
       actions.innerHTML = `<button onclick="editBio()">✏️ Изменить описание</button>`;
     } else if (currentUser.username === 'admin') {
@@ -703,9 +715,16 @@ async function openProfile(username) {
     const photosSection = document.getElementById('profilePhotosSection');
     if(data.photos.length > 0){
       photosSection.style.display = 'block';
-      document.getElementById('profilePhotoGrid').innerHTML = data.photos.map(p => 
-        `<div class="photo-grid-item" onclick="openImageViewer('${p.image_url}')"><img src="${p.image_url}" loading="lazy"></div>`
-      ).join('');
+      document.getElementById('profilePhotoGrid').innerHTML = data.photos.map(p => {
+        if(p.media_type === 'video') {
+          return `<div class="photo-grid-item" onclick="openImageViewer('${p.media_url}', 'video')">
+            <video src="${p.media_url}" muted></video>
+            <div class="video-overlay">▶️</div>
+          </div>`;
+        } else {
+          return `<div class="photo-grid-item" onclick="openImageViewer('${p.media_url}', 'image')"><img src="${p.media_url}" loading="lazy"></div>`;
+        }
+      }).join('');
     } else {
       photosSection.style.display = 'none';
     }
@@ -715,12 +734,19 @@ async function openProfile(username) {
       postsList.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">Пока нет постов</p>';
     } else {
       postsList.innerHTML = data.posts.map(p => {
-        const imageBlock = p.image_url ? `<div class="post-image" onclick="openImageViewer('${p.image_url}')"><img src="${p.image_url}" loading="lazy"></div>` : '';
+        let mediaBlock = '';
+        if(p.media_url) {
+          if(p.media_type === 'video') {
+            mediaBlock = `<div class="post-media"><video src="${p.media_url}" controls></video></div>`;
+          } else {
+            mediaBlock = `<div class="post-media clickable" onclick="openImageViewer('${p.media_url}', 'image')"><img src="${p.media_url}" loading="lazy"></div>`;
+          }
+        }
         return `
           <div class="post" style="margin-bottom:12px;">
             <div style="color:#888;font-size:12px;margin-bottom:8px;">${new Date(p.created_at).toLocaleString('ru-RU')}</div>
             ${p.content ? `<div class="post-content">${p.content}</div>` : ''}
-            ${imageBlock}
+            ${mediaBlock}
             <div style="margin-top:10px;color:#ff6b6b;font-size:13px;">♥ ${p.likes}</div>
           </div>`;
       }).join('');
@@ -758,6 +784,32 @@ function editBio() {
   });
 }
 
+async function deletePost(postId) {
+  if(!confirm('Админ, удалить этот пост навсегда?')) return;
+  try {
+    await fetch(`/api/posts/${postId}`, {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ userId: currentUser.id })
+    });
+    showNotification('🗑️ Пост удалён админом');
+  } catch(e) { showNotification('❌ Ошибка'); }
+}
+
+async function banUser(userId, username) {
+  if(!confirm(`Админ, заблокировать @${username}? Это удалит ВСЕ его посты и сообщения.`)) return;
+  try {
+    await fetch(`/api/users/${userId}`, {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ adminId: currentUser.id })
+    });
+    showNotification(`🚫 @${username} заблокирован и удалён`);
+    showFeed();
+    loadUsers();
+  } catch(e) { showNotification('❌ Ошибка блокировки'); }
+}
+
 // === ОНЛАЙН ===
 async function loadOnlineUsers(){
   const res = await fetch('/api/online');
@@ -789,9 +841,11 @@ function openChat() {
   chatWith = null; 
   renderChatList(); 
   showMessagesArea(false); 
+  if (window.innerWidth <= 768) document.body.style.overflow = 'hidden';
 }
 function closeChat() { 
   document.getElementById('chatModal').classList.remove('show'); 
+  document.body.style.overflow = '';
 }
 
 function renderChatList(){
@@ -870,23 +924,11 @@ socket.on('new_message', (msg) => {
   if(msg.from_id === chatWith){ messagesData.push(msg); renderMessages(); }
   else showNotification('💬 Новое сообщение');
 });
-async function deletePost(postId) {
-  if(!confirm('Админ, удалить этот пост навсегда?')) return;
-  try {
-    await fetch(`/api/posts/${postId}`, {
-      method: 'DELETE',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ userId: currentUser.id })
-    });
-    showNotification('🗑️ Пост удалён админом');
-  } catch(e) { showNotification('❌ Ошибка'); }
-}
 socket.on('post_deleted', (postId) => {
   postsData = postsData.filter(p => p.id != postId);
   renderFeed();
   showNotification('🗑️ Пост был удалён админом');
 });
-
 socket.on('user_banned', (userId) => {
   allUsers = allUsers.filter(u => u.id != userId);
   onlineUsersList = onlineUsersList.filter(u => u.id != userId);
@@ -894,25 +936,13 @@ socket.on('user_banned', (userId) => {
   renderOnlineUsers();
   showNotification('🚫 Пользователь заблокирован');
 });
+
 // === СТАРТ ===
 initAvatarPicker();
 const savedUser = localStorage.getItem('qwen_current_user');
 if(savedUser){ 
   currentUser = JSON.parse(savedUser); 
   enterApp(); 
-}
-async function banUser(userId, username) {
-  if(!confirm(`Админ, заблокировать @${username}? Это удалит ВСЕ его посты и сообщения.`)) return;
-  try {
-    await fetch(`/api/users/${userId}`, {
-      method: 'DELETE',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ adminId: currentUser.id })
-    });
-    showNotification(`🚫 @${username} заблокирован и удалён`);
-    showFeed(); // Вернуться в ленту
-    loadUsers(); // Обновить список
-  } catch(e) { showNotification('❌ Ошибка блокировки'); }
 }
 </script>
 </body>
