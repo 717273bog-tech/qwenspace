@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 МБ
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true);
@@ -94,15 +94,10 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
       
-      // Миграция: если есть старая колонка image_url, переименуем
       try {
         await pool.query(`ALTER TABLE posts RENAME COLUMN image_url TO media_url`);
-        console.log('✅ Миграция image_url → media_url выполнена');
-      } catch(e) {
-        // Колонка уже переименована или не существует — ок
-      }
+      } catch(e) {}
       
-      // Добавляем media_type если её нет
       try {
         await pool.query(`ALTER TABLE posts ADD COLUMN media_type TEXT`);
       } catch(e) {}
@@ -196,7 +191,7 @@ app.post('/api/profile/bio', async (req, res) => {
   res.json({ success: true });
 });
 
-// === ЗАГРУЗКА ФАЙЛОВ (фото и видео) ===
+// === ЗАГРУЗКА ФАЙЛОВ ===
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
   const isVideo = req.file.mimetype.startsWith('video/');
@@ -301,6 +296,7 @@ app.get('/api/online', async (req, res) => {
 // === SOCKET.IO ===
 io.on('connection', (socket) => {
   console.log('✅ User connected:', socket.id);
+  
   socket.on('join_user', async (userId) => {
     onlineUsers.set(socket.id, userId);
     socket.join(`user_${userId}`);
@@ -311,6 +307,45 @@ io.on('connection', (socket) => {
       console.log(`🟢 ${user.username} зашёл`);
     }
   });
+  
+  // === ЗВОНКИ (WebRTC сигнализация) ===
+  socket.on('call_request', (data) => {
+    console.log(`📞 ${data.fromName} звонит ${data.toId}`);
+    io.to(`user_${data.toId}`).emit('incoming_call', data);
+  });
+  
+  socket.on('call_accept', (data) => {
+    console.log(`✅ ${data.toName} принял звонок от ${data.fromId}`);
+    io.to(`user_${data.fromId}`).emit('call_accepted', data);
+  });
+  
+  socket.on('call_reject', (data) => {
+    console.log(`❌ ${data.toName} отклонил звонок от ${data.fromId}`);
+    io.to(`user_${data.fromId}`).emit('call_rejected', data);
+  });
+  
+  socket.on('call_end', (data) => {
+    console.log(`📴 Звонок завершён`);
+    io.to(`user_${data.toId}`).emit('call_ended', data);
+  });
+  
+  socket.on('call_busy', (data) => {
+    io.to(`user_${data.toId}`).emit('call_busy_signal', data);
+  });
+  
+  // WebRTC сигналы
+  socket.on('webrtc_offer', (data) => {
+    io.to(`user_${data.toId}`).emit('webrtc_offer', data);
+  });
+  
+  socket.on('webrtc_answer', (data) => {
+    io.to(`user_${data.toId}`).emit('webrtc_answer', data);
+  });
+  
+  socket.on('webrtc_ice', (data) => {
+    io.to(`user_${data.toId}`).emit('webrtc_ice', data);
+  });
+  
   socket.on('disconnect', () => {
     const userId = onlineUsers.get(socket.id);
     if (userId) {
@@ -340,7 +375,6 @@ setTimeout(async () => {
   } catch(e) { console.error('⚠️ Админ:', e.message); }
 }, 3000);
 
-// === Тестовый ping ===
 app.get('/ping', (req, res) => {
   res.json({ status: 'alive', message: 'Сервер работает!' });
 });
