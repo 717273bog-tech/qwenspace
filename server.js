@@ -54,55 +54,69 @@ pool.on('error', (err) => {
 });
 
 async function initDB() {
-  try {
-    console.log('🔌 Подключаюсь к базе данных...');
-    
-    console.log('📋 Создаю таблицу users...');
-    await pool.query(`CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username TEXT UNIQUE,
-      name TEXT,
-      password TEXT,
-      avatar TEXT,
-      bio TEXT DEFAULT '',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-    console.log('✅ Таблица users готова');
-    
-    console.log('📋 Создаю таблицу posts...');
-    await pool.query(`CREATE TABLE IF NOT EXISTS posts (
-      id SERIAL PRIMARY KEY,
-      author_id INTEGER,
-      content TEXT,
-      image_url TEXT,
-      type TEXT DEFAULT 'public',
-      recipient_id INTEGER,
-      tag TEXT,
-      likes INTEGER DEFAULT 0,
-      liked_by TEXT DEFAULT '[]',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-    console.log('✅ Таблица posts готова');
-    
-    console.log('📋 Создаю таблицу messages...');
-    await pool.query(`CREATE TABLE IF NOT EXISTS messages (
-      id SERIAL PRIMARY KEY,
-      from_id INTEGER,
-      to_id INTEGER,
-      content TEXT,
-      is_read INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-    console.log('✅ Таблица messages готова');
-    
-    console.log('✅ Все таблицы базы данных созданы!');
-  } catch(e) {
-    console.error('❌ Ошибка инициализации БД:', e);
-    console.error('❌ Детали ошибки:', e.message);
-    console.error('❌ Stack:', e.stack);
+  const maxRetries = 5;
+  let retries = 0;
+  
+  while (retries < maxRetries) {
+    try {
+      console.log(`🔌 Попытка подключения к БД (${retries + 1}/${maxRetries})...`);
+      
+      // Проверяем соединение
+      await pool.query('SELECT 1');
+      console.log('✅ Соединение с БД установлено');
+      
+      // Создаем таблицы
+      await pool.query(`CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE,
+        name TEXT,
+        password TEXT,
+        avatar TEXT,
+        bio TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+      
+      await pool.query(`CREATE TABLE IF NOT EXISTS posts (
+        id SERIAL PRIMARY KEY,
+        author_id INTEGER,
+        content TEXT,
+        image_url TEXT,
+        type TEXT DEFAULT 'public',
+        recipient_id INTEGER,
+        tag TEXT,
+        likes INTEGER DEFAULT 0,
+        liked_by TEXT DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+      
+      await pool.query(`CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        from_id INTEGER,
+        to_id INTEGER,
+        content TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+      
+      console.log('✅ Все таблицы созданы!');
+      return; // Успех — выходим из цикла
+      
+    } catch(e) {
+      retries++;
+      console.error(`❌ Ошибка подключения (попытка ${retries}):`, e.message);
+      
+      if (retries >= maxRetries) {
+        console.error('❌ Не удалось подключиться к БД после 5 попыток');
+        return;
+      }
+      
+      // Ждем перед следующей попыткой
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
   }
 }
 
+initDB();
 initDB().catch(e => console.error('❌ Критическая ошибка инициализации:', e));
 
 initDB().catch(e => console.error('❌ Ошибка инициализации БД:', e));
