@@ -551,6 +551,83 @@ header { padding: 15px 10px; }
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// === РОБОТ ===
+const robotFacts = [
+    "Осьминоги имеют три сердца и голубую кровь. 🐙",
+    "Мёд — единственная еда, которая никогда не портится. 🍯",
+    "На Венере сутки длиннее, чем год. 🪐",
+    "Бананы на 50% совпадают по ДНК с человеком. 🍌",
+    "Молния в 5 раз горячее поверхности Солнца. ⚡",
+    "Улитка может спать до 3 лет. 🐌",
+    "Сердце кита бьётся всего 8-10 раз в минуту. 🐋",
+    "В космосе полная тишина — звук не распространяется. 🌌",
+    "Свет от Солнца идёт до Земли 8 минут 20 секунд. ☀️",
+    "У коров есть лучшие подруги, и они грустят при разлуке. 🐄",
+    "На Марсе есть гора Олимп — самый большой вулкан в Солнечной системе (22 км). 🌋",
+    "Человек за жизнь проходит около 170 000 километров. 🚶",
+    "Глаза страуса больше его мозга. 🦢",
+    "В одной капле воды живёт около 50 миллионов бактерий. 💧",
+    "Кошки не чувствуют сладкого вкуса. 🐱",
+    "Самое короткое слово в русском языке, состоящее из 7 согласных — 'взгляд'. 📖",
+    "Акулы появились на Земле раньше, чем деревья. 🦈",
+    "На Эвересте более 200 тел погибших альпинистов. 🏔️",
+    "У бабочек вкус ногами. 🦋",
+    "Нейроны в мозге передают сигналы со скоростью 430 км/ч. 🧠",
+    "В одной галактике больше звёзд, чем песчинок на всех пляжах Земли. ✨",
+    "Самое глубокое озеро в мире — Байкал (1642 метра). 🌊",
+    "Жирафы спят всего 30 минут в сутки. 🦒",
+    "Алмазы могут гореть при температуре 800°C. 💎",
+    "Человек моргает около 15-20 раз в минуту. 👁️",
+    "Самый большой орган человека — кожа (около 2 м²). 🧬",
+    "Кетчуп в XVIII веке делали из грибов, а не из томатов. 🍅",
+    "Сатурн мог бы плавать в воде — его плотность меньше воды. 🪐",
+    "У человека 206 костей, а у акулы — около 300. 🦴",
+    "Самый старый известный рецепт — месопотамский, ему 4000 лет. 📜"
+];
+
+function robotSpeak() {
+    const modal = document.getElementById('robotModal');
+    const message = document.getElementById('robotMessage');
+    
+    // Выбираем случайный факт
+    const randomFact = robotFacts[Math.floor(Math.random() * robotFacts.length)];
+    message.textContent = randomFact;
+    
+    modal.classList.add('show');
+    playRobotSound();
+}
+
+function closeRobot() {
+    document.getElementById('robotModal').classList.remove('show');
+}
+
+function playRobotSound() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc1.type = 'square';
+        osc2.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc1.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
+        osc2.frequency.setValueAtTime(220, audioCtx.currentTime);
+        osc2.frequency.setValueAtTime(440, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc1.start(audioCtx.currentTime);
+        osc2.start(audioCtx.currentTime);
+        osc1.stop(audioCtx.currentTime + 0.2);
+        osc2.stop(audioCtx.currentTime + 0.2);
+    } catch(e) {}
+}
+
+document.getElementById('robotModal').addEventListener('click', (e) => {
+    if (e.target.id === 'robotModal') closeRobot();
+});
 const socket = io();
 const AVATARS = ['👤','🦊','🐼','🦄','🐉','🌸','🌙','⭐','🔥','💎','🎭','🎨','🎸','🚀','🌊','🍀','🦋','🐺','🐱','🐶','🦉','🐙','🌵','🍄','🎃','👻','👽','🧙','🧚','🥷','🧛','🦁'];
 let selectedAvatar = '👤';
