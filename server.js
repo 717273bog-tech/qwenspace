@@ -11,11 +11,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// === Папка для фото ===
+// === Папка для фото и видео ===
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
-// === Загрузка файлов ===
+// === Загрузка файлов (фото и видео) ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -23,12 +23,16 @@ const storage = multer.diskStorage({
     cb(null, unique + path.extname(file.originalname));
   }
 });
+
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 МБ
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Только изображения'));
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только изображения и видео'));
+    }
   }
 });
 
@@ -37,20 +41,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.json());
 
-
-// === PostgreSQL (без SSL для Railway internal) ===
+// === PostgreSQL ===
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false // Отключаем SSL для внутренних соединений Railway
+  ssl: { rejectUnauthorized: false }
 });
 
 pool.on('error', (err) => {
   console.error('⚠️ Ошибка пула PostgreSQL:', err.message);
-});
-
-// Ловим ошибки соединения, чтобы сервер не падал
-pool.on('error', (err) => {
-  console.error('⚠️ Ошибка пула соединений PostgreSQL:', err.message);
 });
 
 async function initDB() {
@@ -60,12 +58,9 @@ async function initDB() {
   while (retries < maxRetries) {
     try {
       console.log(`🔌 Попытка подключения к БД (${retries + 1}/${maxRetries})...`);
-      
-      // Проверяем соединение
       await pool.query('SELECT 1');
       console.log('✅ Соединение с БД установлено');
       
-      // Создаем таблицы
       await pool.query(`CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
@@ -80,7 +75,8 @@ async function initDB() {
         id SERIAL PRIMARY KEY,
         author_id INTEGER,
         content TEXT,
-        image_url TEXT,
+        media_url TEXT,
+        media_type TEXT,
         type TEXT DEFAULT 'public',
         recipient_id INTEGER,
         tag TEXT,
@@ -98,28 +94,34 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
       
-      console.log('✅ Все таблицы созданы!');
-      return; // Успех — выходим из цикла
+      // Миграция: если есть старая колонка image_url, переименуем
+      try {
+        await pool.query(`ALTER TABLE posts RENAME COLUMN image_url TO media_url`);
+        console.log('✅ Миграция image_url → media_url выполнена');
+      } catch(e) {
+        // Колонка уже переименована или не существует — ок
+      }
       
+      // Добавляем media_type если её нет
+      try {
+        await pool.query(`ALTER TABLE posts ADD COLUMN media_type TEXT`);
+      } catch(e) {}
+      
+      console.log('✅ Все таблицы созданы!');
+      return;
     } catch(e) {
       retries++;
       console.error(`❌ Ошибка подключения (попытка ${retries}):`, e.message);
-      
       if (retries >= maxRetries) {
-        console.error('❌ Не удалось подключиться к БД после 5 попыток');
+        console.error('❌ Не удалось подключиться к БД');
         return;
       }
-      
-      // Ждем перед следующей попыткой
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
 }
 
 initDB();
-initDB().catch(e => console.error('❌ Критическая ошибка инициализации:', e));
-
-initDB().catch(e => console.error('❌ Ошибка инициализации БД:', e));
 
 const onlineUsers = new Map();
 
@@ -127,35 +129,19 @@ const onlineUsers = new Map();
 app.post('/api/register', async (req, res) => {
   console.log('📥 Получен запрос регистрации:', req.body);
   const { username, name, password, avatar } = req.body;
-  
-  if (!username || !password || !name) {
-    console.log('❌ Не заполнены все поля');
-    return res.status(400).json({ error: 'Заполни все поля' });
-  }
-  
+  if (!username || !password || !name) return res.status(400).json({ error: 'Заполни все поля' });
   const cleanUsername = username.toLowerCase().trim();
-  
   try {
-    console.log('🔍 Проверяю, существует ли username:', cleanUsername);
     const existing = await pool.query('SELECT id FROM users WHERE username = $1', [cleanUsername]);
-    
-    if (existing.rows.length > 0) {
-      console.log('❌ Username уже занят:', cleanUsername);
-      return res.status(400).json({ error: 'Этот username уже занят' });
-    }
-    
-    console.log('✅ Username свободен, создаю пользователя...');
+    if (existing.rows.length > 0) return res.status(400).json({ error: 'Этот username уже занят' });
     const hash = await bcrypt.hash(password, 10);
     const finalAvatar = avatar || '👤';
-    
     const result = await pool.query(
       'INSERT INTO users (username, name, password, avatar) VALUES ($1, $2, $3, $4) RETURNING id',
       [cleanUsername, name, hash, finalAvatar]
     );
-    
     const newId = result.rows[0].id;
-    console.log(`✅ Пользователь создан: ${cleanUsername} (ID: ${newId})`);
-    
+    console.log(`✅ Создан: ${cleanUsername} (ID: ${newId})`);
     res.json({ id: newId, username: cleanUsername, name, avatar: finalAvatar });
   } catch(e) {
     console.error('❌ Ошибка регистрации:', e);
@@ -164,40 +150,17 @@ app.post('/api/register', async (req, res) => {
 });
 
 // === ВХОД ===
-// === ВХОД ===
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   console.log('🔑 Попытка входа:', username);
-  
   try {
-    // Ищем пользователя
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username.toLowerCase()]);
-    
-    if (result.rows.length === 0) {
-      console.log('❌ Пользователь не найден');
-      return res.status(401).json({ error: 'Неверные данные' });
-    }
-
+    if (result.rows.length === 0) return res.status(401).json({ error: 'Неверные данные' });
     const user = result.rows[0];
-    console.log('✅ Пользователь найден, проверяем пароль...');
-
-    // Сравниваем пароль
     const isMatch = await bcrypt.compare(password, user.password);
-    
-    if (!isMatch) {
-      console.log('❌ Неверный пароль');
-      return res.status(401).json({ error: 'Неверные данные' });
-    }
-
+    if (!isMatch) return res.status(401).json({ error: 'Неверные данные' });
     console.log('✅ Вход успешен!');
-    // Отправляем данные без пароля
-    res.json({ 
-      id: user.id, 
-      username: user.username, 
-      name: user.name, 
-      avatar: user.avatar 
-    });
-
+    res.json({ id: user.id, username: user.username, name: user.name, avatar: user.avatar });
   } catch(e) {
     console.error('❌ Ошибка при входе:', e);
     res.status(500).json({ error: 'Ошибка сервера: ' + e.message });
@@ -218,7 +181,7 @@ app.get('/api/profile/:username', async (req, res) => {
   const user = userRes.rows[0];
   const statsRes = await pool.query('SELECT COUNT(*) as posts, COALESCE(SUM(likes),0) as likes FROM posts WHERE author_id = $1', [user.id]);
   const postsRes = await pool.query(`SELECT * FROM posts WHERE author_id = $1 AND type IN ('public','mention') ORDER BY created_at DESC`, [user.id]);
-  const photosRes = await pool.query(`SELECT id, image_url FROM posts WHERE author_id = $1 AND image_url IS NOT NULL`, [user.id]);
+  const photosRes = await pool.query(`SELECT id, media_url, media_type FROM posts WHERE author_id = $1 AND media_url IS NOT NULL`, [user.id]);
   res.json({
     user,
     stats: statsRes.rows[0],
@@ -233,10 +196,14 @@ app.post('/api/profile/bio', async (req, res) => {
   res.json({ success: true });
 });
 
-// === ЗАГРУЗКА ФОТО ===
-app.post('/api/upload', upload.single('image'), (req, res) => {
+// === ЗАГРУЗКА ФАЙЛОВ (фото и видео) ===
+app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
-  res.json({ url: '/uploads/' + req.file.filename });
+  const isVideo = req.file.mimetype.startsWith('video/');
+  res.json({ 
+    url: '/uploads/' + req.file.filename,
+    type: isVideo ? 'video' : 'image'
+  });
 });
 
 // === ПОСТЫ ===
@@ -247,13 +214,13 @@ app.get('/api/posts', async (req, res) => {
 });
 
 app.post('/api/posts', async (req, res) => {
-  const { author_id, content, type, recipient_id, tag, image_url } = req.body;
+  const { author_id, content, type, recipient_id, tag, media_url, media_type } = req.body;
   try {
     const authorRes = await pool.query('SELECT id FROM users WHERE id = $1', [author_id]);
     if (authorRes.rows.length === 0) return res.status(401).json({ error: 'Аккаунт не найден' });
     const result = await pool.query(
-      `INSERT INTO posts (author_id, content, type, recipient_id, tag, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [author_id, content, type, recipient_id || null, tag, image_url || null]
+      `INSERT INTO posts (author_id, content, type, recipient_id, tag, media_url, media_type) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [author_id, content, type, recipient_id || null, tag, media_url || null, media_type || null]
     );
     const post = result.rows[0];
     const userRes = await pool.query('SELECT username, name, avatar FROM users WHERE id = $1', [author_id]);
@@ -372,6 +339,11 @@ setTimeout(async () => {
     }
   } catch(e) { console.error('⚠️ Админ:', e.message); }
 }, 3000);
+
+// === Тестовый ping ===
+app.get('/ping', (req, res) => {
+  res.json({ status: 'alive', message: 'Сервер работает!' });
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
