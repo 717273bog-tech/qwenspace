@@ -11,11 +11,26 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+// === Папка для фото и видео ===
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(uploadsDir)) {
+    try {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('📁 Папка uploads создана');
+    } catch(e) {
+        console.error('❌ Не удалось создать папку uploads:', e.message);
+    }
+}
 
+// === Загрузка файлов ===
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
+    destination: (req, file, cb) => {
+        // Проверяем, что папка существует перед записью
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        cb(null, uploadsDir);
+    },
     filename: (req, file, cb) => {
         const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
         cb(null, unique + path.extname(file.originalname));
@@ -24,16 +39,30 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { 
+        fileSize: 50 * 1024 * 1024, // 50MB
+        files: 1
+    },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) cb(null, true);
-        else cb(new Error('Только изображения и видео'));
+        console.log('📥 Загрузка файла:', file.originalname, file.mimetype, file.size);
+        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Только изображения и видео'));
+        }
     }
 });
 
+// === ВАЖНО: Увеличиваем лимиты Express ===
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// === Статика ===
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(uploadsDir));
-app.use(express.json());
+app.use('/uploads', express.static(uploadsDir, {
+    maxAge: '1d', // кэшируем на день
+    fallthrough: true
+}));
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
@@ -52,45 +81,21 @@ async function initDB() {
             console.log('✅ Соединение с БД установлено');
 
             await pool.query(`CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username TEXT UNIQUE,
-                name TEXT,
-                password TEXT,
-                avatar TEXT,
-                bio TEXT DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                id SERIAL PRIMARY KEY, username TEXT UNIQUE, name TEXT, password TEXT,
+                avatar TEXT, bio TEXT DEFAULT '', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`);
-
             await pool.query(`CREATE TABLE IF NOT EXISTS posts (
-                id SERIAL PRIMARY KEY,
-                author_id INTEGER,
-                content TEXT,
-                media_url TEXT,
-                media_type TEXT,
-                type TEXT DEFAULT 'public',
-                recipient_id INTEGER,
-                tag TEXT,
-                likes INTEGER DEFAULT 0,
-                liked_by TEXT DEFAULT '[]',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                id SERIAL PRIMARY KEY, author_id INTEGER, content TEXT, media_url TEXT,
+                media_type TEXT, type TEXT DEFAULT 'public', recipient_id INTEGER, tag TEXT,
+                likes INTEGER DEFAULT 0, liked_by TEXT DEFAULT '[]', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`);
-
             await pool.query(`CREATE TABLE IF NOT EXISTS messages (
-                id SERIAL PRIMARY KEY,
-                from_id INTEGER,
-                to_id INTEGER,
-                content TEXT,
-                is_read INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                id SERIAL PRIMARY KEY, from_id INTEGER, to_id INTEGER, content TEXT,
+                is_read INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`);
-
-            // === НОВАЯ ТАБЛИЦА ПОДПИСОК ===
             await pool.query(`CREATE TABLE IF NOT EXISTS follows (
-                id SERIAL PRIMARY KEY,
-                follower_id INTEGER NOT NULL,
-                following_id INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(follower_id, following_id)
+                id SERIAL PRIMARY KEY, follower_id INTEGER NOT NULL, following_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(follower_id, following_id)
             )`);
 
             try { await pool.query(`ALTER TABLE posts RENAME COLUMN image_url TO media_url`); } catch(e) {}
@@ -141,17 +146,48 @@ app.post('/api/login', async (req, res) => {
     } catch(e) { res.status(500).json({ error: 'Ошибка сервера: ' + e.message }); }
 });
 
-// === ПОЛЬЗОВАТЕЛИ ===
 app.get('/api/users', async (req, res) => {
     const result = await pool.query('SELECT id, username, name, avatar FROM users');
     res.json(result.rows);
 });
 
-// === ПРОФИЛЬ (с подписками) ===
+// === ЗАГРУЗКА ФАЙЛОВ (С ЛОГАМИ) ===
+app.post('/api/upload', (req, res) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            console.error('❌ Ошибка multer:', err);
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ error: 'Файл слишком большой (макс. 50 МБ)' });
+                }
+                return res.status(400).json({ error: 'Ошибка загрузки: ' + err.message });
+            }
+            return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+            console.error('❌ Файл не получен');
+            return res.status(400).json({ error: 'Файл не загружен' });
+        }
+        
+        const isVideo = req.file.mimetype.startsWith('video/');
+        const url = '/uploads/' + req.file.filename;
+        console.log('✅ Файл сохранён:', url, req.file.size, 'байт');
+        
+        // Проверяем, что файл реально существует
+        const filePath = path.join(uploadsDir, req.file.filename);
+        if (!fs.existsSync(filePath)) {
+            console.error('❌ Файл не найден после сохранения!');
+            return res.status(500).json({ error: 'Файл не сохранился' });
+        }
+        
+        res.json({ url, type: isVideo ? 'video' : 'image' });
+    });
+});
+
+// === ПРОФИЛЬ ===
 app.get('/api/profile/:username', async (req, res) => {
     const username = req.params.username.toLowerCase().trim();
     const myId = req.query.myId ? parseInt(req.query.myId) : null;
-    
     const userRes = await pool.query('SELECT id, username, name, avatar, bio FROM users WHERE username = $1', [username]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'Пользователь не найден' });
     const user = userRes.rows[0];
@@ -160,26 +196,18 @@ app.get('/api/profile/:username', async (req, res) => {
     const postsRes = await pool.query(`SELECT * FROM posts WHERE author_id = $1 AND type IN ('public','mention') ORDER BY created_at DESC`, [user.id]);
     const photosRes = await pool.query(`SELECT id, media_url, media_type FROM posts WHERE author_id = $1 AND media_url IS NOT NULL`, [user.id]);
 
-    // Счётчики подписчиков и подписок
     const followersCount = await pool.query('SELECT COUNT(*) FROM follows WHERE following_id = $1', [user.id]);
     const followingCount = await pool.query('SELECT COUNT(*) FROM follows WHERE follower_id = $1', [user.id]);
     const friendsCount = await pool.query(
-        `SELECT COUNT(*) FROM follows f1 
-         JOIN follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id 
-         WHERE f1.follower_id = $1`,
+        `SELECT COUNT(*) FROM follows f1 JOIN follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id WHERE f1.follower_id = $1`,
         [user.id]
     );
 
-    // Статус подписки (если смотрит другой пользователь)
     let followStatus = null;
     if (myId && myId !== user.id) {
         const iFollow = await pool.query('SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2', [myId, user.id]);
         const followsMe = await pool.query('SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2', [user.id, myId]);
-        followStatus = {
-            iFollow: iFollow.rows.length > 0,
-            followsMe: followsMe.rows.length > 0,
-            isFriend: iFollow.rows.length > 0 && followsMe.rows.length > 0
-        };
+        followStatus = { iFollow: iFollow.rows.length > 0, followsMe: followsMe.rows.length > 0, isFriend: iFollow.rows.length > 0 && followsMe.rows.length > 0 };
     }
 
     res.json({
@@ -191,52 +219,28 @@ app.get('/api/profile/:username', async (req, res) => {
     });
 });
 
-// === СПИСКИ ПОДПИСЧИКОВ/ПОДПИСОК/ДРУЗЕЙ ===
 app.get('/api/followers/:userId', async (req, res) => {
-    const result = await pool.query(
-        `SELECT u.id, u.username, u.name, u.avatar FROM follows f 
-         JOIN users u ON f.follower_id = u.id WHERE f.following_id = $1 ORDER BY f.created_at DESC`,
-        [req.params.userId]
-    );
+    const result = await pool.query(`SELECT u.id, u.username, u.name, u.avatar FROM follows f JOIN users u ON f.follower_id = u.id WHERE f.following_id = $1 ORDER BY f.created_at DESC`, [req.params.userId]);
     res.json(result.rows);
 });
-
 app.get('/api/following/:userId', async (req, res) => {
-    const result = await pool.query(
-        `SELECT u.id, u.username, u.name, u.avatar FROM follows f 
-         JOIN users u ON f.following_id = u.id WHERE f.follower_id = $1 ORDER BY f.created_at DESC`,
-        [req.params.userId]
-    );
+    const result = await pool.query(`SELECT u.id, u.username, u.name, u.avatar FROM follows f JOIN users u ON f.following_id = u.id WHERE f.follower_id = $1 ORDER BY f.created_at DESC`, [req.params.userId]);
     res.json(result.rows);
 });
-
 app.get('/api/friends/:userId', async (req, res) => {
     const result = await pool.query(
-        `SELECT u.id, u.username, u.name, u.avatar 
-         FROM follows f1 
-         JOIN follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id
-         JOIN users u ON f1.following_id = u.id
-         WHERE f1.follower_id = $1 
-         ORDER BY u.name`,
+        `SELECT u.id, u.username, u.name, u.avatar FROM follows f1 JOIN follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id JOIN users u ON f1.following_id = u.id WHERE f1.follower_id = $1 ORDER BY u.name`,
         [req.params.userId]
     );
     res.json(result.rows);
 });
 
-// === ПОДПИСАТЬСЯ ===
 app.post('/api/follow', async (req, res) => {
     const { followerId, followingId } = req.body;
     if (followerId === followingId) return res.status(400).json({ error: 'Нельзя подписаться на себя' });
     try {
-        await pool.query(
-            'INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [followerId, followingId]
-        );
-        // Проверяем, стали ли друзьями
-        const mutual = await pool.query(
-            'SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2',
-            [followingId, followerId]
-        );
+        await pool.query('INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [followerId, followingId]);
+        const mutual = await pool.query('SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2', [followingId, followerId]);
         if (mutual.rows.length > 0) {
             const u1 = await pool.query('SELECT username, name, avatar FROM users WHERE id = $1', [followerId]);
             const u2 = await pool.query('SELECT username, name, avatar FROM users WHERE id = $1', [followingId]);
@@ -247,7 +251,6 @@ app.post('/api/follow', async (req, res) => {
     } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// === ОТПИСАТЬСЯ ===
 app.delete('/api/follow', async (req, res) => {
     const { followerId, followingId } = req.body;
     await pool.query('DELETE FROM follows WHERE follower_id = $1 AND following_id = $2', [followerId, followingId]);
@@ -260,36 +263,20 @@ app.post('/api/profile/bio', async (req, res) => {
     res.json({ success: true });
 });
 
-// === ЗАГРУЗКА ФАЙЛОВ ===
-app.post('/api/upload', upload.single('file'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'Файл не загружен' });
-    const isVideo = req.file.mimetype.startsWith('video/');
-    res.json({ url: '/uploads/' + req.file.filename, type: isVideo ? 'video' : 'image' });
-});
-
 // === ПОСТЫ ===
 app.get('/api/posts', async (req, res) => {
     const myId = req.query.myId ? parseInt(req.query.myId) : null;
-    
+    const baseQuery = `SELECT p.*, u.username as author_username, u.name as author_name, u.avatar as author_avatar FROM posts p JOIN users u ON p.author_id = u.id`;
     let query, params;
-    const baseQuery = `SELECT p.*, u.username as author_username, u.name as author_name, u.avatar as author_avatar
-                       FROM posts p JOIN users u ON p.author_id = u.id`;
-    
     if (myId) {
-        // Показываем: публичные + свои + посты от подписок + упоминания для меня
-        query = `${baseQuery}
-                 LEFT JOIN follows f ON f.follower_id = $1 AND f.following_id = p.author_id
-                 WHERE p.type IN ('public','mention') 
-                   OR p.author_id = $1 
-                   OR f.follower_id IS NOT NULL
-                   OR (p.type = 'private' AND (p.author_id = $1 OR p.recipient_id = $1))
+        query = `${baseQuery} LEFT JOIN follows f ON f.follower_id = $1 AND f.following_id = p.author_id
+                 WHERE p.type IN ('public','mention') OR p.author_id = $1 OR f.follower_id IS NOT NULL OR (p.type = 'private' AND (p.author_id = $1 OR p.recipient_id = $1))
                  ORDER BY p.created_at DESC`;
         params = [myId];
     } else {
         query = `${baseQuery} WHERE p.type IN ('public','mention') ORDER BY p.created_at DESC`;
         params = [];
     }
-    
     const result = await pool.query(query, params);
     res.json(result.rows.map(r => ({...r, liked_by: JSON.parse(r.liked_by)})));
 });
@@ -297,11 +284,8 @@ app.get('/api/posts', async (req, res) => {
 app.post('/api/posts', async (req, res) => {
     const { author_id, content, type, recipient_id, tag, media_url, media_type } = req.body;
     try {
-        const authorRes = await pool.query('SELECT id FROM users WHERE id = $1', [author_id]);
-        if (authorRes.rows.length === 0) return res.status(401).json({ error: 'Аккаунт не найден' });
         const result = await pool.query(
-            `INSERT INTO posts (author_id, content, type, recipient_id, tag, media_url, media_type) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            `INSERT INTO posts (author_id, content, type, recipient_id, tag, media_url, media_type) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
             [author_id, content, type, recipient_id || null, tag, media_url || null, media_type || null]
         );
         const post = result.rows[0];
@@ -351,10 +335,8 @@ app.delete('/api/users/:userId', async (req, res) => {
 app.get('/api/messages/:userId', async (req, res) => {
     const myId = req.query.myId;
     const result = await pool.query(
-        `SELECT m.*, u_from.username as from_username, u_to.username as to_username
-         FROM messages m JOIN users u_from ON m.from_id = u_from.id JOIN users u_to ON m.to_id = u_to.id
-         WHERE (m.from_id = $1 AND m.to_id = $2) OR (m.from_id = $2 AND m.to_id = $1)
-         ORDER BY m.created_at ASC`,
+        `SELECT m.*, u_from.username as from_username, u_to.username as to_username FROM messages m JOIN users u_from ON m.from_id = u_from.id JOIN users u_to ON m.to_id = u_to.id
+         WHERE (m.from_id = $1 AND m.to_id = $2) OR (m.from_id = $2 AND m.to_id = $1) ORDER BY m.created_at ASC`,
         [myId, req.params.userId]
     );
     res.json(result.rows);
@@ -365,14 +347,10 @@ app.post('/api/messages', async (req, res) => {
     await pool.query('INSERT INTO messages (from_id, to_id, content) VALUES ($1, $2, $3)', [from_id, to_id, content]);
     const userRes = await pool.query('SELECT username, name, avatar FROM users WHERE id = $1', [from_id]);
     const sender = userRes.rows[0];
-    io.to(`user_${to_id}`).emit('new_message', {
-        from_id, content, date: Date.now(),
-        from_username: sender.username, from_name: sender.name, from_avatar: sender.avatar
-    });
+    io.to(`user_${to_id}`).emit('new_message', { from_id, content, date: Date.now(), from_username: sender.username, from_name: sender.name, from_avatar: sender.avatar });
     res.json({ success: true });
 });
 
-// === ОНЛАЙН ===
 app.get('/api/online', async (req, res) => {
     const onlineIds = Array.from(onlineUsers.values());
     if (onlineIds.length === 0) return res.json([]);
@@ -381,19 +359,21 @@ app.get('/api/online', async (req, res) => {
     res.json(result.rows);
 });
 
+// === ГЛОБАЛЬНЫЙ ОБРАБОТЧИК ОШИБОК ===
+app.use((err, req, res, next) => {
+    console.error('❌ Глобальная ошибка:', err);
+    res.status(500).json({ error: err.message || 'Внутренняя ошибка сервера' });
+});
+
 // === SOCKET.IO ===
 io.on('connection', (socket) => {
     console.log('✅ User connected:', socket.id);
-
     socket.on('join_user', async (userId) => {
         onlineUsers.set(socket.id, userId);
         socket.join(`user_${userId}`);
         const userRes = await pool.query('SELECT id, username, name, avatar FROM users WHERE id = $1', [userId]);
-        if (userRes.rows.length > 0) {
-            io.emit('user_online', userRes.rows[0]);
-        }
+        if (userRes.rows.length > 0) io.emit('user_online', userRes.rows[0]);
     });
-
     socket.on('call_request', (data) => io.to(`user_${data.toId}`).emit('incoming_call', data));
     socket.on('call_accept', (data) => io.to(`user_${data.fromId}`).emit('call_accepted', data));
     socket.on('call_reject', (data) => io.to(`user_${data.fromId}`).emit('call_rejected', data));
@@ -402,7 +382,6 @@ io.on('connection', (socket) => {
     socket.on('webrtc_offer', (data) => io.to(`user_${data.toId}`).emit('webrtc_offer', data));
     socket.on('webrtc_answer', (data) => io.to(`user_${data.toId}`).emit('webrtc_answer', data));
     socket.on('webrtc_ice', (data) => io.to(`user_${data.toId}`).emit('webrtc_ice', data));
-
     socket.on('disconnect', () => {
         const userId = onlineUsers.get(socket.id);
         if (userId) {
@@ -414,22 +393,33 @@ io.on('connection', (socket) => {
     });
 });
 
-// === Создание админа ===
 setTimeout(async () => {
     try {
         const existing = await pool.query("SELECT id FROM users WHERE username = 'admin'");
         if (existing.rows.length === 0) {
             const hash = await bcrypt.hash('SuperAdmin2026!', 10);
-            await pool.query(
-                "INSERT INTO users (username, name, password, avatar, bio) VALUES ('admin', 'Главный Админ', $1, '👑', 'Я слежу за порядком.')",
-                [hash]
-            );
+            await pool.query("INSERT INTO users (username, name, password, avatar, bio) VALUES ('admin', 'Главный Админ', $1, '👑', 'Я слежу за порядком.')", [hash]);
             console.log('👑 Админ создан');
         }
     } catch(e) { console.error('⚠️ Админ:', e.message); }
 }, 3000);
 
 app.get('/ping', (req, res) => res.json({ status: 'alive' }));
+
+// === ДИАГНОСТИЧЕСКИЙ РОУТ ===
+app.get('/api/debug/uploads', (req, res) => {
+    try {
+        const files = fs.readdirSync(uploadsDir);
+        res.json({
+            uploadsDir,
+            exists: fs.existsSync(uploadsDir),
+            filesCount: files.length,
+            files: files.slice(0, 20)
+        });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`✅ Server running on port ${PORT}`));
