@@ -96,6 +96,8 @@
   .chat-header-info b { display:block; }
   .chat-header-info small { color:#888; font-size:12px; }
   .chat-close { background:none; border:none; color:#aaa; font-size:24px; cursor:pointer; }
+  .chat-call-btn { background:linear-gradient(45deg,#00b894,#00cec9); border:none; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:16px; margin-left:6px; }
+  .chat-call-btn.video { background:linear-gradient(45deg,#6c5ce7,#a29bfe); }
   .chat-list { overflow-y:auto; padding:10px; flex:1; }
   .chat-contact { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; cursor:pointer; }
   .chat-contact:hover { background:rgba(255,255,255,0.05); }
@@ -121,6 +123,8 @@
   .profile-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
   .profile-actions button { background:linear-gradient(45deg,#ff6b6b,#feca57); border:none; color:#000; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; }
   .profile-actions button.secondary { background:rgba(72,219,251,0.2); color:#48dbfb; }
+  .profile-actions button.call { background:linear-gradient(45deg,#00b894,#00cec9); color:#fff; }
+  .profile-actions button.video-call { background:linear-gradient(45deg,#6c5ce7,#a29bfe); color:#fff; }
   .profile-section { background:rgba(255,255,255,0.05); border-radius:16px; padding:20px; margin-bottom:20px; }
   .profile-section h3 { font-size:16px; margin-bottom:15px; color:#feca57; }
   .photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
@@ -134,6 +138,43 @@
   .notification { position:fixed; top:20px; right:20px; background:linear-gradient(45deg,#ff6b6b,#feca57); color:#000; padding:14px 22px; border-radius:12px; font-weight:bold; box-shadow:0 10px 30px rgba(0,0,0,0.4); transform:translateX(400px); transition:transform 0.4s; z-index:600; max-width:300px; }
   .notification.show { transform:translateX(0); }
   footer { text-align:center; padding:20px; color:#666; font-size:12px; }
+
+  /* === ЗВОНОК === */
+  .call-screen { position:fixed; inset:0; background:linear-gradient(135deg,#0f0c29,#302b63); display:none; flex-direction:column; z-index:1000; }
+  .call-screen.show { display:flex; }
+  .call-screen.video-call { background:#000; }
+  .call-header { padding:20px; text-align:center; color:#fff; z-index:10; }
+  .call-status { font-size:14px; color:#aaa; margin-bottom:10px; }
+  .call-avatar { width:120px; height:120px; border-radius:50%; background:linear-gradient(45deg,#feca57,#ff9ff3); margin:20px auto; display:flex; align-items:center; justify-content:center; font-size:60px; animation: pulse-call 2s infinite; }
+  @keyframes pulse-call { 0%,100% { transform:scale(1); box-shadow:0 0 0 rgba(254,202,87,0.4); } 50% { transform:scale(1.05); box-shadow:0 0 30px rgba(254,202,87,0.6); } }
+  .call-name { font-size:24px; font-weight:bold; margin-bottom:5px; }
+  .call-username { color:#aaa; font-size:14px; }
+  .call-timer { font-size:18px; color:#feca57; margin-top:10px; }
+  .call-videos { flex:1; position:relative; display:none; }
+  .call-videos.show { display:block; }
+  .call-remote-video { width:100%; height:100%; object-fit:cover; background:#000; }
+  .call-local-video { position:absolute; bottom:100px; right:20px; width:120px; height:160px; border-radius:12px; object-fit:cover; border:2px solid rgba(255,255,255,0.3); background:#222; z-index:5; }
+  .call-controls { padding:30px 20px; display:flex; justify-content:center; gap:20px; z-index:10; background:rgba(0,0,0,0.3); }
+  .call-btn { width:60px; height:60px; border-radius:50%; border:none; color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .call-btn.mute { background:rgba(255,255,255,0.15); }
+  .call-btn.mute.active { background:#ff6b6b; }
+  .call-btn.camera { background:rgba(255,255,255,0.15); }
+  .call-btn.camera.active { background:#6c5ce7; }
+  .call-btn.end { background:#ff6b6b; width:70px; height:70px; }
+  .call-btn.end:hover { background:#ee5a5a; }
+
+  /* Входящий звонок */
+  .incoming-call-modal { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:900; }
+  .incoming-call-modal.show { display:flex; }
+  .incoming-call-card { background:linear-gradient(135deg,#1a1a2e,#16213e); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:40px 30px; text-align:center; max-width:350px; width:90%; }
+  .incoming-call-avatar { width:100px; height:100px; border-radius:50%; background:linear-gradient(45deg,#feca57,#ff9ff3); margin:0 auto 20px; display:flex; align-items:center; justify-content:center; font-size:50px; animation: pulse-call 1.5s infinite; }
+  .incoming-call-name { font-size:22px; font-weight:bold; margin-bottom:5px; }
+  .incoming-call-type { color:#aaa; font-size:14px; margin-bottom:30px; }
+  .incoming-call-buttons { display:flex; justify-content:center; gap:30px; }
+  .incoming-call-btn { width:60px; height:60px; border-radius:50%; border:none; color:#fff; font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .incoming-call-btn.accept { background:#00b894; }
+  .incoming-call-btn.accept-video { background:#6c5ce7; }
+  .incoming-call-btn.reject { background:#ff6b6b; }
 
   /* === МОБИЛЬНАЯ АДАПТАЦИЯ === */
   @media (max-width: 768px) {
@@ -194,6 +235,9 @@
     .notification { top: 10px; right: 10px; left: 10px; max-width: none; font-size: 13px; padding: 12px 16px; }
     .image-viewer img, .image-viewer video { max-width: 100%; max-height: 100%; border-radius: 0; }
     .image-viewer-close { top: 10px; right: 10px; width: 36px; height: 36px; font-size: 18px; }
+    .call-local-video { width: 90px; height: 120px; bottom: 110px; right: 10px; }
+    .call-btn { width: 55px; height: 55px; font-size: 22px; }
+    .call-btn.end { width: 65px; height: 65px; }
   }
 
   @media (max-width: 375px) {
@@ -217,7 +261,7 @@
   <div class="auth-card">
     <div class="auth-logo">🌐</div>
     <h2>Моя Соцсеть</h2>
-    <div class="auth-subtitle">Общайся, делись фото и видео, находи друзей</div>
+    <div class="auth-subtitle">Общайся, звони, делись моментами 📸🎥📞</div>
     <div class="auth-tabs">
       <div class="auth-tab active" onclick="switchTab('login')">Вход</div>
       <div class="auth-tab" onclick="switchTab('register')">Регистрация</div>
@@ -250,7 +294,7 @@
       <button class="icon-btn" onclick="logout()" title="Выйти">🚪</button>
     </div>
     <div class="site-title">Моя Соцсеть</div>
-    <div class="site-subtitle">Общайся с друзьями, делись моментами 📸🎥</div>
+    <div class="site-subtitle">Общайся, звони, делись моментами 📸🎥📞</div>
     <div class="stats">
       <div class="stat"><b id="postCount">0</b><span>постов</span></div>
       <div class="stat"><b id="userCount">0</b><span>жителей</span></div>
@@ -263,7 +307,6 @@
     <div id="onlineUsersList"></div>
   </div>
 
-  <!-- ЛЕНТА -->
   <div id="feedView">
     <div class="composer">
       <div class="composer-head">
@@ -291,7 +334,6 @@
     <div id="feed"></div>
   </div>
 
-  <!-- ПРОФИЛЬ -->
   <div class="profile-view" id="profileView">
     <button class="back-btn" onclick="showFeed()">← Назад в ленту</button>
     <div class="profile-header">
@@ -325,6 +367,8 @@
     <div class="chat-header">
       <div class="mini-avatar" id="chatAvatar">👤</div>
       <div class="chat-header-info"><b id="chatName">Сообщения</b><small id="chatStatus">выбери контакт</small></div>
+      <button class="chat-call-btn" id="chatCallBtn" onclick="startCall('audio')" style="display:none;" title="Голосовой звонок">📞</button>
+      <button class="chat-call-btn video" id="chatVideoCallBtn" onclick="startCall('video')" style="display:none;" title="Видеозвонок">📹</button>
       <button class="chat-close" onclick="closeChat()">×</button>
     </div>
     <div class="chat-list" id="chatList"></div>
@@ -341,7 +385,48 @@
   <button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>
 </div>
 
+<!-- ЭКРАН ЗВОНКА -->
+<div class="call-screen" id="callScreen">
+  <div class="call-header">
+    <div class="call-status" id="callStatus">Вызов...</div>
+    <div class="call-avatar" id="callAvatar">👤</div>
+    <div class="call-name" id="callName">Имя</div>
+    <div class="call-username" id="callUsername">@username</div>
+    <div class="call-timer" id="callTimer" style="display:none;">00:00</div>
+  </div>
+  <div class="call-videos" id="callVideos">
+    <video class="call-remote-video" id="remoteVideo" autoplay playsinline></video>
+    <video class="call-local-video" id="localVideo" autoplay playsinline muted></video>
+  </div>
+  <div class="call-controls">
+    <button class="call-btn mute" id="muteBtn" onclick="toggleMute()" title="Микрофон">🎤</button>
+    <button class="call-btn camera" id="cameraBtn" onclick="toggleCamera()" title="Камера" style="display:none;">📹</button>
+    <button class="call-btn end" onclick="endCall()" title="Завершить">📴</button>
+  </div>
+</div>
+
+<!-- ВХОДЯЩИЙ ЗВОНОК -->
+<div class="incoming-call-modal" id="incomingCallModal">
+  <div class="incoming-call-card">
+    <div class="incoming-call-avatar" id="incomingAvatar">👤</div>
+    <div class="incoming-call-name" id="incomingName">Имя</div>
+    <div class="incoming-call-type" id="incomingType">Входящий звонок...</div>
+    <div class="incoming-call-buttons">
+      <button class="incoming-call-btn reject" onclick="rejectCall()" title="Отклонить">📴</button>
+      <button class="incoming-call-btn accept" id="incomingAcceptBtn" onclick="acceptCall()" title="Принять">📞</button>
+    </div>
+  </div>
+</div>
+
 <div class="notification" id="notification"></div>
+
+<!-- Звук звонка -->
+<audio id="ringtone" loop>
+  <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbsGczIj+a3teleEw0Kkya8teleUw0KQAA" type="audio/wav">
+</audio>
+<audio id="ringback">
+  <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbsGczIj+a3teleUw0Kk+a3teleUw0KQAA" type="audio/wav">
+</audio>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -358,6 +443,18 @@ let chatWith = null;
 let onlineUsersList = [];
 let currentMediaFile = null;
 let currentMediaType = null;
+
+// === WebRTC ===
+let localStream = null;
+let peerConnection = null;
+let callState = { active: false, type: null, withUser: null, isInitiator: false, startTime: null, timerInterval: null };
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
 
 // === АВТОРИЗАЦИЯ ===
 function initAvatarPicker(){
@@ -406,12 +503,9 @@ async function register() {
       body: JSON.stringify({ username, name, password, avatar: selectedAvatar })
     });
     const data = await res.json();
-    if(res.ok) { 
-      currentUser = data; 
-      localStorage.setItem('qwen_current_user', JSON.stringify(currentUser)); 
-      enterApp(); 
-    } else showError(data.error);
-  } catch(e) { showError('Ошибка соединения: ' + e.message); }
+    if(res.ok) { currentUser = data; localStorage.setItem('qwen_current_user', JSON.stringify(currentUser)); enterApp(); } 
+    else showError(data.error);
+  } catch(e) { showError('Ошибка: ' + e.message); }
 }
 
 async function login() {
@@ -424,12 +518,9 @@ async function login() {
       body: JSON.stringify({ username, password })
     });
     const data = await res.json();
-    if(res.ok) { 
-      currentUser = data; 
-      localStorage.setItem('qwen_current_user', JSON.stringify(currentUser)); 
-      enterApp(); 
-    } else showError(data.error);
-  } catch(e) { showError('Ошибка соединения: ' + e.message); }
+    if(res.ok) { currentUser = data; localStorage.setItem('qwen_current_user', JSON.stringify(currentUser)); enterApp(); } 
+    else showError(data.error);
+  } catch(e) { showError('Ошибка: ' + e.message); }
 }
 
 function logout() {
@@ -476,33 +567,18 @@ function selectRecipient(id) { selectedRecipient = id; setMode(postMode); }
 function handleMediaSelect(event){
   const file = event.target.files[0];
   if(!file) return;
-  
   const isVideo = file.type.startsWith('video/');
   const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
   const label = isVideo ? 'видео' : 'фото';
-  
-  if(file.size > maxSize){ 
-    showNotification(`⚠️ Файл слишком большой (макс. ${isVideo ? '50' : '5'} МБ для ${label})`); 
-    return; 
-  }
-  
+  if(file.size > maxSize){ showNotification(`⚠️ Файл слишком большой (макс. ${isVideo ? '50' : '5'} МБ)`); return; }
   currentMediaFile = file;
   currentMediaType = isVideo ? 'video' : 'image';
-  
   const reader = new FileReader();
   reader.onload = (e) => {
     if(isVideo) {
-      document.getElementById('mediaPreviewArea').innerHTML = `
-        <div class="media-preview">
-          <video src="${e.target.result}" controls></video>
-          <button class="remove-media" onclick="removeMedia()">×</button>
-        </div>`;
+      document.getElementById('mediaPreviewArea').innerHTML = `<div class="media-preview"><video src="${e.target.result}" controls></video><button class="remove-media" onclick="removeMedia()">×</button></div>`;
     } else {
-      document.getElementById('mediaPreviewArea').innerHTML = `
-        <div class="media-preview">
-          <img src="${e.target.result}">
-          <button class="remove-media" onclick="removeMedia()">×</button>
-        </div>`;
+      document.getElementById('mediaPreviewArea').innerHTML = `<div class="media-preview"><img src="${e.target.result}"><button class="remove-media" onclick="removeMedia()">×</button></div>`;
     }
   };
   reader.readAsDataURL(file);
@@ -529,14 +605,9 @@ async function addPost() {
   const txt = document.getElementById('newPost').value.trim();
   if(!txt && !currentMediaFile) return showNotification('⚠️ Напиши текст или добавь фото/видео');
   if((postMode === 'mention' || postMode === 'private') && !selectedRecipient) return showNotification('⚠️ Выбери получателя');
-
   try {
     let mediaData = null;
-    if(currentMediaFile){
-      showNotification('📤 Загружаю файл...');
-      mediaData = await uploadMedia();
-    }
-    
+    if(currentMediaFile){ showNotification('📤 Загружаю файл...'); mediaData = await uploadMedia(); }
     const res = await fetch('/api/posts', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -546,12 +617,7 @@ async function addPost() {
         media_type: mediaData ? mediaData.type : null
       })
     });
-    
-    if(!res.ok) {
-      const err = await res.json();
-      return showNotification('❌ ' + err.error);
-    }
-    
+    if(!res.ok) { const err = await res.json(); return showNotification('❌ ' + err.error); }
     document.getElementById('newPost').value = '';
     removeMedia();
     selectedRecipient = null;
@@ -572,24 +638,20 @@ function renderFeed(){
   feed.innerHTML = '';
   document.getElementById('postCount').textContent = postsData.length;
   let totalLikes = 0;
-  
   const visible = postsData.filter(p => {
     if(p.type === 'public' || p.type === 'mention') return true;
     if(p.type === 'private') return p.author_id === currentUser.id || p.recipient_id === currentUser.id;
     return false;
   });
-
   if(visible.length === 0){
-    feed.innerHTML = `<div class="empty-feed"><div class="empty-feed-icon">📭</div><h3>Пока нет постов</h3><p style="margin-top:10px;">Будь первым, кто напишет что-нибудь!</p></div>`;
+    feed.innerHTML = `<div class="empty-feed"><div class="empty-feed-icon">📭</div><h3>Пока нет постов</h3><p style="margin-top:10px;">Будь первым!</p></div>`;
     document.getElementById('totalLikes').textContent = 0;
     return;
   }
-
   visible.forEach(p => {
     totalLikes += p.likes;
     const liked = p.liked_by && p.liked_by.includes(currentUser.id) ? 'liked' : '';
     const isOnline = onlineUsersList.find(u => u.id === p.author_id);
-    
     let recipientBlock = '';
     if(p.type === 'mention'){
       const r = allUsers.find(u => u.id === p.recipient_id) || {avatar:'👤', username:'unknown'};
@@ -597,7 +659,6 @@ function renderFeed(){
     } else if(p.type === 'private'){
       recipientBlock = `<div class="post-recipient" style="background:rgba(255,107,107,0.1);border-left-color:#ff6b6b;color:#ff9a9a;">🔒 личное сообщение</div>`;
     }
-    
     let mediaBlock = '';
     if(p.media_url) {
       if(p.media_type === 'video') {
@@ -606,9 +667,7 @@ function renderFeed(){
         mediaBlock = `<div class="post-media clickable" onclick="openImageViewer('${p.media_url}', 'image')"><img src="${p.media_url}" loading="lazy"></div>`;
       }
     }
-    
     const safeUsername = p.author_username.replace(/'/g, "\\'");
-    
     feed.innerHTML += `
       <div class="post">
         <div class="post-head">
@@ -625,8 +684,7 @@ function renderFeed(){
         <div class="post-actions">
           <button class="btn ${liked}" onclick="toggleLike(${p.id})">♥ ${p.likes}</button>
           <button class="btn" onclick="replyTo('${safeUsername}')">↩ ответить</button>
-          ${currentUser.username === 'admin' ? 
-            `<button class="btn" style="color:#ff6b6b;" onclick="deletePost(${p.id})">🗑️ Удалить</button>` : ''}
+          ${currentUser.username === 'admin' ? `<button class="btn" style="color:#ff6b6b;" onclick="deletePost(${p.id})">🗑️ Удалить</button>` : ''}
         </div>
       </div>`;
   });
@@ -647,15 +705,9 @@ function replyTo(username) {
 function openImageViewer(url, type) {
   const viewer = document.getElementById('imageViewer');
   if(type === 'video') {
-    viewer.innerHTML = `
-      <button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>
-      <video src="${url}" controls autoplay style="max-width:90%;max-height:90%;border-radius:10px;"></video>
-    `;
+    viewer.innerHTML = `<button class="image-viewer-close" onclick="closeImageViewer(event)">×</button><video src="${url}" controls autoplay style="max-width:90%;max-height:90%;border-radius:10px;"></video>`;
   } else {
-    viewer.innerHTML = `
-      <button class="image-viewer-close" onclick="closeImageViewer(event)">×</button>
-      <img src="${url}">
-    `;
+    viewer.innerHTML = `<button class="image-viewer-close" onclick="closeImageViewer(event)">×</button><img src="${url}">`;
   }
   viewer.classList.add('show');
   document.body.style.overflow = 'hidden';
@@ -669,14 +721,10 @@ function closeImageViewer(event) {
   document.body.style.overflow = '';
 }
 
-// Свайп для закрытия на мобильных
 let touchStartY = 0;
-document.getElementById('imageViewer').addEventListener('touchstart', (e) => {
-  touchStartY = e.touches[0].clientY;
-});
+document.getElementById('imageViewer').addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; });
 document.getElementById('imageViewer').addEventListener('touchend', (e) => {
-  const touchEndY = e.changedTouches[0].clientY;
-  if (touchEndY - touchStartY > 100) closeImageViewer();
+  if (e.changedTouches[0].clientY - touchStartY > 100) closeImageViewer();
 });
 
 // === ПРОФИЛЬ ===
@@ -684,13 +732,9 @@ async function openProfile(username) {
   if(!username) return showNotification('❌ Username пустой');
   try {
     const res = await fetch(`/api/profile/${encodeURIComponent(username.toLowerCase().trim())}`);
-    if(!res.ok) {
-      const err = await res.json();
-      return showNotification('❌ ' + err.error);
-    }
+    if(!res.ok) { const err = await res.json(); return showNotification('❌ ' + err.error); }
     const data = await res.json();
     const user = data.user;
-    
     document.getElementById('profileAvatar').textContent = user.avatar;
     document.getElementById('profileName').textContent = user.name;
     document.getElementById('profileUsername').textContent = '@' + user.username;
@@ -698,29 +742,28 @@ async function openProfile(username) {
     document.getElementById('profilePosts').textContent = data.stats.posts;
     document.getElementById('profileLikes').textContent = data.stats.likes;
     document.getElementById('profilePhotos').textContent = data.photos.length;
-    
     const actions = document.getElementById('profileActions');
     if(user.username === currentUser.username){
       actions.innerHTML = `<button onclick="editBio()">✏️ Изменить описание</button>`;
     } else if (currentUser.username === 'admin') {
       actions.innerHTML = `
         <button onclick="closeProfileAndMessage('${user.username}')">💬 Написать</button>
+        <button class="call" onclick="callFromProfile(${user.id}, 'audio')">📞 Позвонить</button>
+        <button class="video-call" onclick="callFromProfile(${user.id}, 'video')">📹 Видео</button>
         <button class="secondary" style="background:rgba(255,107,107,0.2); color:#ff6b6b;" onclick="banUser(${user.id}, '${user.username}')">🚫 Заблокировать</button>`;
     } else {
       actions.innerHTML = `
         <button onclick="closeProfileAndMessage('${user.username}')">💬 Написать</button>
+        <button class="call" onclick="callFromProfile(${user.id}, 'audio')">📞 Позвонить</button>
+        <button class="video-call" onclick="callFromProfile(${user.id}, 'video')">📹 Видео</button>
         <button class="secondary" onclick="closeProfileAndPost('${user.username}')">📝 Упомянуть</button>`;
     }
-    
     const photosSection = document.getElementById('profilePhotosSection');
     if(data.photos.length > 0){
       photosSection.style.display = 'block';
       document.getElementById('profilePhotoGrid').innerHTML = data.photos.map(p => {
         if(p.media_type === 'video') {
-          return `<div class="photo-grid-item" onclick="openImageViewer('${p.media_url}', 'video')">
-            <video src="${p.media_url}" muted></video>
-            <div class="video-overlay">▶️</div>
-          </div>`;
+          return `<div class="photo-grid-item" onclick="openImageViewer('${p.media_url}', 'video')"><video src="${p.media_url}" muted></video><div class="video-overlay">▶️</div></div>`;
         } else {
           return `<div class="photo-grid-item" onclick="openImageViewer('${p.media_url}', 'image')"><img src="${p.media_url}" loading="lazy"></div>`;
         }
@@ -728,7 +771,6 @@ async function openProfile(username) {
     } else {
       photosSection.style.display = 'none';
     }
-    
     const postsList = document.getElementById('profilePostsList');
     if(data.posts.length === 0){
       postsList.innerHTML = '<p style="color:#888;text-align:center;padding:20px;">Пока нет постов</p>';
@@ -742,16 +784,9 @@ async function openProfile(username) {
             mediaBlock = `<div class="post-media clickable" onclick="openImageViewer('${p.media_url}', 'image')"><img src="${p.media_url}" loading="lazy"></div>`;
           }
         }
-        return `
-          <div class="post" style="margin-bottom:12px;">
-            <div style="color:#888;font-size:12px;margin-bottom:8px;">${new Date(p.created_at).toLocaleString('ru-RU')}</div>
-            ${p.content ? `<div class="post-content">${p.content}</div>` : ''}
-            ${mediaBlock}
-            <div style="margin-top:10px;color:#ff6b6b;font-size:13px;">♥ ${p.likes}</div>
-          </div>`;
+        return `<div class="post" style="margin-bottom:12px;"><div style="color:#888;font-size:12px;margin-bottom:8px;">${new Date(p.created_at).toLocaleString('ru-RU')}</div>${p.content ? `<div class="post-content">${p.content}</div>` : ''}${mediaBlock}<div style="margin-top:10px;color:#ff6b6b;font-size:13px;">♥ ${p.likes}</div></div>`;
       }).join('');
     }
-    
     document.getElementById('feedView').style.display = 'none';
     document.getElementById('profileView').classList.add('show');
     window.scrollTo({top:0, behavior:'smooth'});
@@ -773,41 +808,35 @@ function closeProfile() {
 function showFeed() { closeProfile(); }
 
 function editBio() {
-  const newBio = prompt('Напиши описание своего профиля:', document.getElementById('profileBio').textContent === 'Описание не указано' ? '' : document.getElementById('profileBio').textContent);
+  const newBio = prompt('Напиши описание:', document.getElementById('profileBio').textContent === 'Описание не указано' ? '' : document.getElementById('profileBio').textContent);
   if(newBio === null) return;
   fetch('/api/profile/bio', {
     method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ userId: currentUser.id, bio: newBio })
-  }).then(() => {
-    showNotification('✅ Описание обновлено');
-    openProfile(currentUser.username);
-  });
+  }).then(() => { showNotification('✅ Обновлено'); openProfile(currentUser.username); });
 }
 
 async function deletePost(postId) {
-  if(!confirm('Админ, удалить этот пост навсегда?')) return;
+  if(!confirm('Удалить этот пост?')) return;
   try {
     await fetch(`/api/posts/${postId}`, {
-      method: 'DELETE',
-      headers: {'Content-Type': 'application/json'},
+      method: 'DELETE', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ userId: currentUser.id })
     });
-    showNotification('🗑️ Пост удалён админом');
+    showNotification('🗑️ Пост удалён');
   } catch(e) { showNotification('❌ Ошибка'); }
 }
 
 async function banUser(userId, username) {
-  if(!confirm(`Админ, заблокировать @${username}? Это удалит ВСЕ его посты и сообщения.`)) return;
+  if(!confirm(`Заблокировать @${username}?`)) return;
   try {
     await fetch(`/api/users/${userId}`, {
-      method: 'DELETE',
-      headers: {'Content-Type': 'application/json'},
+      method: 'DELETE', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ adminId: currentUser.id })
     });
-    showNotification(`🚫 @${username} заблокирован и удалён`);
-    showFeed();
-    loadUsers();
-  } catch(e) { showNotification('❌ Ошибка блокировки'); }
+    showNotification(`🚫 @${username} заблокирован`);
+    showFeed(); loadUsers();
+  } catch(e) { showNotification('❌ Ошибка'); }
 }
 
 // === ОНЛАЙН ===
@@ -841,6 +870,8 @@ function openChat() {
   chatWith = null; 
   renderChatList(); 
   showMessagesArea(false); 
+  document.getElementById('chatCallBtn').style.display = 'none';
+  document.getElementById('chatVideoCallBtn').style.display = 'none';
   if (window.innerWidth <= 768) document.body.style.overflow = 'hidden';
 }
 function closeChat() { 
@@ -867,6 +898,8 @@ async function openDialog(userId) {
   document.getElementById('chatAvatar').textContent = user.avatar;
   document.getElementById('chatName').textContent = user.name;
   document.getElementById('chatStatus').textContent = `@${user.username}`;
+  document.getElementById('chatCallBtn').style.display = 'flex';
+  document.getElementById('chatVideoCallBtn').style.display = 'flex';
   const res = await fetch(`/api/messages/${userId}?myId=${currentUser.id}`);
   messagesData = await res.json();
   renderMessages(); 
@@ -914,7 +947,324 @@ function showNotification(text){
   setTimeout(() => n.classList.remove('show'), 3000);
 }
 
-// === SOCKET ===
+// === ЗВОНКИ ===
+function callFromProfile(userId, type) {
+  closeProfile();
+  startCallTo(userId, type);
+}
+
+async function startCall(type) {
+  if(!chatWith) return;
+  startCallTo(chatWith, type);
+}
+
+async function startCallTo(userId, type) {
+  const user = allUsers.find(u => u.id === userId);
+  if(!user) return showNotification('❌ Пользователь не найден');
+  
+  if(callState.active) {
+    showNotification('⚠️ У вас уже идёт звонок');
+    return;
+  }
+  
+  try {
+    await setupLocalStream(type === 'video');
+    
+    callState = { 
+      active: true, 
+      type: type, 
+      withUser: userId, 
+      isInitiator: true, 
+      startTime: null, 
+      timerInterval: null,
+      userName: user.name,
+      userAvatar: user.avatar,
+      userUsername: user.username
+    };
+    
+    showCallScreen(user, type, 'Вызов...');
+    
+    socket.emit('call_request', {
+      fromId: currentUser.id,
+      toId: userId,
+      fromName: currentUser.name,
+      fromAvatar: currentUser.avatar,
+      fromUsername: currentUser.username,
+      callType: type
+    });
+    
+  } catch(e) {
+    showNotification('❌ Не удалось получить доступ к микрофону/камере');
+    console.error(e);
+  }
+}
+
+async function setupLocalStream(withVideo) {
+  if(localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+  }
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: withVideo ? { width: 640, height: 480 } : false
+    });
+  } catch(e) {
+    throw new Error('Нет доступа к микрофону/камере');
+  }
+}
+
+function showCallScreen(user, type, status) {
+  const screen = document.getElementById('callScreen');
+  document.getElementById('callAvatar').textContent = user.avatar;
+  document.getElementById('callName').textContent = user.name;
+  document.getElementById('callUsername').textContent = '@' + user.username;
+  document.getElementById('callStatus').textContent = status;
+  document.getElementById('callTimer').style.display = 'none';
+  
+  if(type === 'video') {
+    screen.classList.add('video-call');
+    document.getElementById('callVideos').classList.add('show');
+    document.getElementById('cameraBtn').style.display = 'flex';
+    if(localStream) {
+      document.getElementById('localVideo').srcObject = localStream;
+    }
+  } else {
+    screen.classList.remove('video-call');
+    document.getElementById('callVideos').classList.remove('show');
+    document.getElementById('cameraBtn').style.display = 'none';
+  }
+  
+  screen.classList.add('show');
+}
+
+function startCallTimer() {
+  callState.startTime = Date.now();
+  document.getElementById('callTimer').style.display = 'block';
+  callState.timerInterval = setInterval(() => {
+    const seconds = Math.floor((Date.now() - callState.startTime) / 1000);
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    document.getElementById('callTimer').textContent = `${mins}:${secs}`;
+  }, 1000);
+}
+
+async function acceptCall() {
+  const modal = document.getElementById('incomingCallModal');
+  modal.classList.remove('show');
+  
+  try {
+    await setupLocalStream(callState.type === 'video');
+    
+    showCallScreen({
+      name: callState.userName,
+      avatar: callState.userAvatar,
+      username: callState.userUsername
+    }, callState.type, 'Соединение...');
+    
+    // Создаём peer connection и отправляем answer
+    await createPeerConnection();
+    
+    if(callState.pendingOffer) {
+      await peerConnection.setRemoteDescription(callState.pendingOffer);
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.emit('webrtc_answer', {
+        fromId: currentUser.id,
+        toId: callState.withUser,
+        sdp: answer
+      });
+    }
+    
+    socket.emit('call_accept', {
+      fromId: currentUser.id,
+      toId: callState.withUser,
+      toName: callState.userName
+    });
+    
+  } catch(e) {
+    showNotification('❌ Не удалось подключиться');
+    endCall();
+  }
+}
+
+function rejectCall() {
+  socket.emit('call_reject', {
+    fromId: currentUser.id,
+    toId: callState.withUser,
+    toName: callState.userName
+  });
+  hideIncomingCall();
+  cleanupCall();
+}
+
+function hideIncomingCall() {
+  document.getElementById('incomingCallModal').classList.remove('show');
+}
+
+function endCall() {
+  if(callState.withUser) {
+    socket.emit('call_end', {
+      fromId: currentUser.id,
+      toId: callState.withUser
+    });
+  }
+  cleanupCall();
+}
+
+function cleanupCall() {
+  if(callState.timerInterval) clearInterval(callState.timerInterval);
+  if(peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  if(localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  document.getElementById('callScreen').classList.remove('show');
+  document.getElementById('callVideos').classList.remove('show');
+  document.getElementById('remoteVideo').srcObject = null;
+  document.getElementById('localVideo').srcObject = null;
+  callState = { active: false, type: null, withUser: null, isInitiator: false, startTime: null, timerInterval: null };
+}
+
+function toggleMute() {
+  if(!localStream) return;
+  const audioTrack = localStream.getAudioTracks()[0];
+  if(audioTrack) {
+    audioTrack.enabled = !audioTrack.enabled;
+    document.getElementById('muteBtn').classList.toggle('active', !audioTrack.enabled);
+  }
+}
+
+function toggleCamera() {
+  if(!localStream) return;
+  const videoTrack = localStream.getVideoTracks()[0];
+  if(videoTrack) {
+    videoTrack.enabled = !videoTrack.enabled;
+    document.getElementById('cameraBtn').classList.toggle('active', !videoTrack.enabled);
+  }
+}
+
+async function createPeerConnection() {
+  peerConnection = new RTCPeerConnection(rtcConfig);
+  
+  localStream.getTracks().forEach(track => {
+    peerConnection.addTrack(track, localStream);
+  });
+  
+  peerConnection.ontrack = (event) => {
+    document.getElementById('remoteVideo').srcObject = event.streams[0];
+  };
+  
+  peerConnection.onicecandidate = (event) => {
+    if(event.candidate && callState.withUser) {
+      socket.emit('webrtc_ice', {
+        fromId: currentUser.id,
+        toId: callState.withUser,
+        candidate: event.candidate
+      });
+    }
+  };
+  
+  peerConnection.onconnectionstatechange = () => {
+    if(peerConnection.connectionState === 'connected') {
+      document.getElementById('callStatus').textContent = 'На связи';
+      startCallTimer();
+    } else if(peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+      showNotification('⚠️ Соединение потеряно');
+      setTimeout(endCall, 1500);
+    }
+  };
+}
+
+// === Socket события для звонков ===
+socket.on('incoming_call', async (data) => {
+  if(callState.active) {
+    socket.emit('call_busy', { fromId: currentUser.id, toId: data.fromId });
+    return;
+  }
+  
+  callState = {
+    active: false,
+    type: data.callType,
+    withUser: data.fromId,
+    isInitiator: false,
+    startTime: null,
+    timerInterval: null,
+    userName: data.fromName,
+    userAvatar: data.fromAvatar,
+    userUsername: data.fromUsername,
+    pendingOffer: null
+  };
+  
+  document.getElementById('incomingAvatar').textContent = data.fromAvatar;
+  document.getElementById('incomingName').textContent = data.fromName;
+  document.getElementById('incomingType').textContent = data.callType === 'video' ? '📹 Видеозвонок...' : '📞 Голосовой звонок...';
+  document.getElementById('incomingAcceptBtn').className = 'incoming-call-btn ' + (data.callType === 'video' ? 'accept-video' : 'accept');
+  document.getElementById('incomingAcceptBtn').textContent = data.callType === 'video' ? '📹' : '📞';
+  
+  document.getElementById('incomingCallModal').classList.add('show');
+});
+
+socket.on('call_accepted', async (data) => {
+  document.getElementById('callStatus').textContent = 'Соединение...';
+  
+  await createPeerConnection();
+  
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+  
+  socket.emit('webrtc_offer', {
+    fromId: currentUser.id,
+    toId: callState.withUser,
+    sdp: offer
+  });
+});
+
+socket.on('call_rejected', (data) => {
+  showNotification('❌ Звонок отклонён');
+  cleanupCall();
+});
+
+socket.on('call_busy_signal', (data) => {
+  showNotification('⚠️ Абонент занят');
+  cleanupCall();
+});
+
+socket.on('call_ended', (data) => {
+  showNotification('📴 Звонок завершён');
+  cleanupCall();
+});
+
+socket.on('webrtc_offer', async (data) => {
+  if(!peerConnection) await createPeerConnection();
+  
+  if(!callState.isInitiator && !document.getElementById('callScreen').classList.contains('show')) {
+    callState.pendingOffer = data.sdp;
+    return;
+  }
+  
+  await peerConnection.setRemoteDescription(data.sdp);
+});
+
+socket.on('webrtc_answer', async (data) => {
+  if(peerConnection && peerConnection.signalingState !== 'stable') {
+    await peerConnection.setRemoteDescription(data.sdp);
+  }
+});
+
+socket.on('webrtc_ice', async (data) => {
+  if(peerConnection) {
+    try {
+      await peerConnection.addIceCandidate(data.candidate);
+    } catch(e) {
+      console.error('Ошибка ICE:', e);
+    }
+  }
+});
+
+// === SOCKET для постов/сообщений ===
 socket.on('new_post', (post) => { postsData.unshift(post); renderFeed(); });
 socket.on('update_likes', (data) => {
   const post = postsData.find(p => p.id === data.postId);
@@ -927,7 +1277,7 @@ socket.on('new_message', (msg) => {
 socket.on('post_deleted', (postId) => {
   postsData = postsData.filter(p => p.id != postId);
   renderFeed();
-  showNotification('🗑️ Пост был удалён админом');
+  showNotification('🗑️ Пост удалён');
 });
 socket.on('user_banned', (userId) => {
   allUsers = allUsers.filter(u => u.id != userId);
@@ -940,10 +1290,7 @@ socket.on('user_banned', (userId) => {
 // === СТАРТ ===
 initAvatarPicker();
 const savedUser = localStorage.getItem('qwen_current_user');
-if(savedUser){ 
-  currentUser = JSON.parse(savedUser); 
-  enterApp(); 
-}
+if(savedUser){ currentUser = JSON.parse(savedUser); enterApp(); }
 </script>
 </body>
 </html>
