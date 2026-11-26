@@ -39,14 +39,15 @@ app.use(express.json());
 
 // === PostgreSQL ===
 // === PostgreSQL (Устойчивое подключение для Railway) ===
+// === PostgreSQL ===
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
-  max: 10, // Максимум 10 одновременных подключений
-  idleTimeoutMillis: 30000, // Закрывать неактивные соединения через 30 сек
-  connectionTimeoutMillis: 5000, // Таймаут подключения 5 сек
+  ssl: { rejectUnauthorized: false }
 });
 
+pool.on('error', (err) => {
+  console.error('⚠️ Ошибка пула PostgreSQL:', err.message);
+});
 // Ловим ошибки соединения, чтобы сервер не падал
 pool.on('error', (err) => {
   console.error('⚠️ Ошибка пула соединений PostgreSQL:', err.message);
