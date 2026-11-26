@@ -37,17 +37,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.json());
 
-// === PostgreSQL ===
-// === PostgreSQL (Устойчивое подключение для Railway) ===
-// === PostgreSQL ===
+
+// === PostgreSQL (без SSL для Railway internal) ===
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: false // Отключаем SSL для внутренних соединений Railway
 });
 
 pool.on('error', (err) => {
   console.error('⚠️ Ошибка пула PostgreSQL:', err.message);
 });
+
 // Ловим ошибки соединения, чтобы сервер не падал
 pool.on('error', (err) => {
   console.error('⚠️ Ошибка пула соединений PostgreSQL:', err.message);
